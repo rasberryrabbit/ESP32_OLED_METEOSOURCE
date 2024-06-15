@@ -147,6 +147,7 @@ class MeteoSource:
     error_count=0
     weinfo=[]
     lastsynctime=0
+    err=0
     
     def __init__(self,lat,lon,key):
         self.last_remain=b''
@@ -154,6 +155,7 @@ class MeteoSource:
         self.to_send=b'GET /api/v1/free/point?lat=%s&lon=%s&sections=hourly&timezone=Auto&language=en&units=metric&key=%s HTTP/1.1\r\nHost: www.meteosource.com\r\nConnection: keep-alive\r\nAccept: */*\r\n\r\n' % (lat,lon,key)
     
     def GetInfo(self):
+        self.err=0
         while True:
             y=time.localtime(time.time()+self.timeoffset)
             if y[0]>2000:
@@ -295,6 +297,7 @@ class MeteoSource:
                     break
             sock.close()
         except Exception as e:
+            self.err=e.errno
             print(e)
             print(" parser")
         if self.imgoffset>2:
@@ -357,7 +360,7 @@ def displayinfo(bpop):
             else:
                 print('error',wi[3])
             dt=time.localtime(wi[1])
-            disp.text('%s' % (wi[2].decode()),px+0,i)
+            disp.text('%s' % (wi[2].decode()[:12]),px+0,i)
             drawtemp(px+0,i+8,wi[5])
             drawwind(px+0,i+16,wi[6])
             disp.text('  %s' % (wi[7].decode()),px+0,i+24)
@@ -405,6 +408,11 @@ def cbUpdate(t):
             displayinfo(True)
             print('ok')
         else:
+            if winfo.err==113:
+                time.sleep(5)
+                if winfo.GetInfo():
+                    displayinfo(True)
+                    print('ok')
             if winfo.error_count>3:
                 winfo.error_count=0
                 wlan.disconnect()
