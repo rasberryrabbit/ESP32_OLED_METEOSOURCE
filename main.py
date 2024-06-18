@@ -174,13 +174,15 @@ class MeteoSource:
                     self.lastsynctime=time.time()
                 except Exception as e:
                     pass
+        sock=None
+        sslsock=None
         try:
-            sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             saddr=socket.getaddrinfo('www.meteosource.com',443)[0][-1]
+            sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(15)
             sock.connect(saddr)
-            # https
             sslsock=ssl.wrap_socket(sock)
-            
+
             self.last_remain=b''
             self.ContLen=-1
             self.imageoffset=0
@@ -295,11 +297,14 @@ class MeteoSource:
                 # no data
                 else:
                     break
-            sock.close()
         except Exception as e:
             self.err=e.errno
             print(e)
             print(" parser")
+        if sslsock:
+            sslsock.close()
+        if sock:
+            sock.close()
         if self.imgoffset>2:
             self.error_count=0
             return True
@@ -353,25 +358,28 @@ def displayinfo(bpop):
     idx=0
     px=random.randint(0,2)
     disp.fill(0)
-    for wi in winfo.weinfo:
-        if idx>0:
-            if fileexists(wi[3]):
-                loadpbm(px+90,i,wi[3])
-            else:
-                print('error',wi[3])
-            dt=time.localtime(wi[1])
-            disp.text('%s' % (wi[2].decode()[:12]),px+0,i)
-            drawtemp(px+0,i+8,wi[5])
-            drawwind(px+0,i+16,wi[6])
-            disp.text('  %s' % (wi[7].decode()),px+0,i+24)
-            if wi[8]>0:
-                disp.text(' %3d%%' % (wi[8]), px+50, i+8)
-            if wi[9]>0:
-                drawrain(px+50,i+16,wi[9])
-            disp.text('%2d:00' % (dt[3]),px+50,i+24)
-            drawvline(px+45,i+8,24)
-            i+=32
-        idx+=1
+    if winfo.imgoffset>2:
+        for wi in winfo.weinfo:
+            if idx>0:
+                if fileexists(wi[3]):
+                    loadpbm(px+90,i,wi[3])
+                else:
+                    print('error',wi[3])
+                dt=time.localtime(wi[1])
+                disp.text('%s' % (wi[2].decode()[:12]),px+0,i)
+                drawtemp(px+0,i+8,wi[5])
+                drawwind(px+0,i+16,wi[6])
+                disp.text('  %s' % (wi[7].decode()),px+0,i+24)
+                if wi[8]>0:
+                    disp.text(' %3d%%' % (wi[8]), px+50, i+8)
+                if wi[9]>0:
+                    drawrain(px+50,i+16,wi[9])
+                disp.text('%2d:00' % (dt[3]),px+50,i+24)
+                drawvline(px+45,i+8,24)
+                i+=32
+            idx+=1
+    else:
+        disp.text('Error code: %d' %(winfo.err),px,i)
     disp.show()
     
 tmTime=Timer(0)
@@ -402,26 +410,32 @@ def cbUpdate(t):
     tmTime.deinit()
     tmUpdate.deinit()
     try:
+        lcnt=0
         winfo.imgoffset=0
-        if winfo.GetInfo():
-            #print(winfo.weinfo)
-            displayinfo(True)
-            print('ok')
-        else:
-            if winfo.err==113:
-                time.sleep(5)
-                if winfo.GetInfo():
-                    displayinfo(True)
-                    print('ok')
-            if winfo.error_count>3:
+        while not winfo.GetInfo():
+            lcnt=lcnt+1
+            if lcnt>2:
+                break
+            if winfo.err==113 or winfo.err==116:
                 winfo.error_count=0
-                wlan.disconnect()
-                tryconnect(True)
+                winfo.imgoffset=0
+                time.sleep(2)
+            else:
+                if winfo.error_count>3:
+                    winfo.error_count=0
+                    wlan.disconnect()
+                    tryconnect(True)
+                break
+
+        if winfo.imgoffset>2:
+            displayinfo(True)
+            print('ok')           
+
     except Exception as e:
         print(e)
         print(" Update")
     tmTime.init(period=1000, mode=Timer.PERIODIC, callback=cbTime)
-    tmUpdate.init(period=300000, mode=Timer.PERIODIC, callback=cbUpdate)
+    tmUpdate.init(period=360000, mode=Timer.PERIODIC, callback=cbUpdate)
 
         
 cbUpdate(0)
