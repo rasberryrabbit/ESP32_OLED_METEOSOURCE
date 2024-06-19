@@ -39,6 +39,7 @@ else:
     f.write('lon=\n')
     f.write('key=\n')
     f.write('timezone=\n')
+    f.write('timeout=\n')
     f.close()
     raise ConfigError
     
@@ -53,6 +54,11 @@ if tmzone=='':
 else:
     tzone=int(tmzone)
 ctimeoffset=tzone*3600
+try:
+    stimeout=config.option['timeout']
+    ctimeout=int(stimeout)
+except:
+    ctimeout=20
 
 if key=='':
     print('Missing info in config.txt.')
@@ -146,6 +152,7 @@ class MeteoSource:
     firststamp=0
     error_count=0
     weinfo=[]
+    lsinfo=None
     lastsynctime=0
     err=0
     
@@ -179,14 +186,14 @@ class MeteoSource:
         try:
             saddr=socket.getaddrinfo('www.meteosource.com',443)[0][-1]
             sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(15)
+            sock.settimeout(ctimeout)
             sock.connect(saddr)
             sslsock=ssl.wrap_socket(sock)
 
             self.last_remain=b''
             self.ContLen=-1
             self.imageoffset=0
-            self.firststamp=0
+            self.firststamp=time.time()+self.timeoffset
             self.weinfo=[]
             sslsock.write(self.to_send)
             while True:
@@ -239,8 +246,6 @@ class MeteoSource:
                            else:
                                dayw=""
                                dayww=0
-                           if self.firststamp==0:
-                               self.firststamp=dayww
                            # weather
                            sweath=re.search("\"weather\":\"([^\"]+)",data)
                            if sweath:
@@ -285,7 +290,7 @@ class MeteoSource:
                            else:
                                rain=0.0
                            # info array
-                           if self.firststamp<=dayww:
+                           if dayww>self.firststamp:
                                self.weinfo.append([dayw,dayww,weath,weicon,summary,ttemp,windspd,winddir,cloud,rain])
                                self.imgoffset+=1
                            data=data[epos:]
@@ -360,26 +365,45 @@ def displayinfo(bpop):
     disp.fill(0)
     if winfo.imgoffset>2:
         for wi in winfo.weinfo:
-            if idx>0:
-                if fileexists(wi[3]):
-                    loadpbm(px+90,i,wi[3])
-                else:
-                    print('error',wi[3])
-                dt=time.localtime(wi[1])
-                disp.text('%s' % (wi[2].decode()[:12]),px+0,i)
-                drawtemp(px+0,i+8,wi[5])
-                drawwind(px+0,i+16,wi[6])
-                disp.text('  %s' % (wi[7].decode()),px+0,i+24)
-                if wi[8]>0:
-                    disp.text(' %3d%%' % (wi[8]), px+50, i+8)
-                if wi[9]>0:
-                    drawrain(px+50,i+16,wi[9])
-                disp.text('%2d:00' % (dt[3]),px+50,i+24)
-                drawvline(px+45,i+8,24)
-                i+=32
+            if fileexists(wi[3]):
+                loadpbm(px+90,i,wi[3])
+            else:
+                print('error',wi[3])
+            dt=time.localtime(wi[1])
+            disp.text('%s' % (wi[2].decode()[:12]),px+0,i)
+            drawtemp(px+0,i+8,wi[5])
+            drawwind(px+0,i+16,wi[6])
+            disp.text('  %s' % (wi[7].decode()),px+0,i+24)
+            if wi[8]>0:
+                disp.text(' %3d%%' % (wi[8]), px+50, i+8)
+            if wi[9]>0:
+                drawrain(px+50,i+16,wi[9])
+            disp.text('%2d:00' % (dt[3]),px+50,i+24)
+            drawvline(px+45,i+8,24)
+            i+=32
+            if idx==0:
+                winfo.lsinfo=wi
+            if idx==1:
+                break
             idx+=1
     else:
-        disp.text('Error code: %d' %(winfo.err),px,i)
+        if winfo.lsinfo:
+            if fileexists(winfo.lsinfo[3]):
+                loadpbm(px+90,0,winfo.lsinfo[3])
+            else:
+                print('error',winfo.lsinfo[3])
+            dt=time.localtime(winfo.lsinfo[1])
+            disp.text('%s' % (winfo.lsinfo[2].decode()[:12]),px+0,0)
+            drawtemp(px+0,8,winfo.lsinfo[5])
+            drawwind(px+0,16,winfo.lsinfo[6])
+            disp.text('  %s' % (winfo.lsinfo[7].decode()),px+0,24)
+            if winfo.lsinfo[8]>0:
+                disp.text(' %3d%%' % (winfo.lsinfo[8]), px+50, 8)
+            if winfo.lsinfo[9]>0:
+                drawrain(px+50,16,winfo.lsinfo[9])
+            disp.text('%2d:00' % (dt[3]),px+50,24)
+            drawvline(px+45,8,24)            
+        disp.text('Error code: %d' %(winfo.err),px,40)
     disp.show()
     
 tmTime=Timer(0)
