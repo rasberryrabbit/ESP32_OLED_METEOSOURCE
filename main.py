@@ -3,7 +3,7 @@
 from machine import Timer, Pin, I2C, SoftI2C, RTC
 import micropython, re, time, network, socket, ntptime, configreader, sh1106, random, framebuf, ssl
 micropython.alloc_emergency_exception_buf(100)
-import vga1_8x8 as font1
+import vga2_8x8 as font1
 
 class ConfigError(RuntimeError):
     pass
