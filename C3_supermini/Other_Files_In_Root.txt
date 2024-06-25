@@ -1,2 +1,0 @@
-It need other files in root.
-Only difference SCL/SDA Pin in main.py.

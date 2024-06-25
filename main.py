@@ -1,7 +1,7 @@
 """ main. py """
 
 from machine import Timer, Pin, I2C, SoftI2C, RTC
-import micropython, re, time, network, socket, ntptime, configreader, sh1106, random, framebuf, ssl
+import micropython, re, time, network, socket, ntptime, configreader, sh1106, random, framebuf, ssl, uos
 micropython.alloc_emergency_exception_buf(100)
 import vga2_8x8 as font1
 
@@ -20,7 +20,10 @@ def fileexists(fn):
         return False
 
 # display
-i2c=SoftI2C(scl=Pin(4),sda=Pin(5))
+if uos.uname().machine.find("C3")>-1:
+    i2c=SoftI2C(scl=Pin(6),sda=Pin(5))
+else:
+    i2c=SoftI2C(scl=Pin(4),sda=Pin(5))
 disp=sh1106.SH1106_I2C(128,64,i2c,None,0x3c,rotate=180)
 disp.fill(0)
 disp.show()
