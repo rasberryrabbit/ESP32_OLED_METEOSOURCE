@@ -19,11 +19,15 @@ def fileexists(fn):
     except:
         return False
 
-# display
+# display and timer init
 if uos.uname().machine.find("C3")>-1:
     i2c=SoftI2C(scl=Pin(6),sda=Pin(5))
+    # id 0 or 2
+    tmUpdate = Timer(2)
 else:
     i2c=SoftI2C(scl=Pin(4),sda=Pin(5))
+    tmUpdate = Timer(1)
+
 disp=sh1106.SH1106_I2C(128,64,i2c,None,0x3c,rotate=180)
 disp.fill(0)
 disp.show()
@@ -409,60 +413,60 @@ def displayinfo(bpop):
         disp.text('Error code: %d' %(winfo.err),px,40)
     disp.show()
     
-tmTime=Timer(0)
-# update every 5 minutes
-tmUpdate = Timer(1)
-
 timeoff=0
 showuvi=0
+timeupd=360
 
-def cbTime(t):
-    global timeoff
-    displayinfo(True)
-    # Night mode
-    rt=time.localtime(time.time()+winfo.timeoffset)
-    if rt[3]>20 or rt[3]<7:
-        if timeoff>=5:
-            timeoff=0
-            disp.contrast(0)
-    else:
-        if timeoff>=5:
-            timeoff=0
-            disp.contrast(0x5f)
-        elif timeoff==3:
-            disp.contrast(0)
-    timeoff+=1
-       
 def cbUpdate(t):
-    tmTime.deinit()
-    tmUpdate.deinit()
-    try:
-        lcnt=0
-        winfo.imgoffset=0
-        while not winfo.GetInfo():
-            lcnt=lcnt+1
-            if lcnt>2:
-                break
-            if winfo.err==113 or winfo.err==116:
-                winfo.error_count=0
-                winfo.imgoffset=0
-                time.sleep(2)
-            else:
-                if winfo.error_count>3:
+    global timeoff
+    global timeupd
+    
+    timeupd+=1
+    if timeupd>=360:
+        tmUpdate.deinit()
+        timeupd=0
+        print("cbUpdate")
+        try:
+            lcnt=0
+            winfo.imgoffset=0
+            while not winfo.GetInfo():
+                lcnt=lcnt+1
+                if lcnt>2:
+                    break
+                if winfo.err==113 or winfo.err==116:
                     winfo.error_count=0
-                    wlan.disconnect()
-                    tryconnect(True)
-                break
+                    winfo.imgoffset=0
+                    time.sleep(2)
+                else:
+                    if winfo.error_count>3:
+                        winfo.error_count=0
+                        wlan.disconnect()
+                        tryconnect(True)
+                    break
 
-        if winfo.imgoffset>2:
-            displayinfo(True)
-            print('ok')           
+            if winfo.imgoffset>2:
+                displayinfo(True)
+                print('ok')           
 
-    except Exception as e:
-        print(e)
-        print(" Update")
-    tmTime.init(period=1000, mode=Timer.PERIODIC, callback=cbTime)
-    tmUpdate.init(period=360000, mode=Timer.PERIODIC, callback=cbUpdate)
+        except Exception as e:
+            print(e)
+            print(" Update")
+        tmUpdate.init(period=1000, mode=Timer.PERIODIC, callback=cbUpdate)
+    else:
+        displayinfo(True)
+        # Night mode
+        rt=time.localtime(time.time()+winfo.timeoffset)
+        if rt[3]>20 or rt[3]<7:
+            if timeoff>=5:
+                timeoff=0
+                disp.contrast(0)
+        else:
+            if timeoff>=5:
+                timeoff=0
+                disp.contrast(0x5f)
+            elif timeoff==3:
+                disp.contrast(0)
+        timeoff+=1
 
         
 cbUpdate(0)
