@@ -24,11 +24,11 @@ if uos.uname().machine.find("C3")>-1:
     i2c=SoftI2C(scl=Pin(6),sda=Pin(5))
     # id 0 or 2
     tmUpdate = Timer(2)
-    modelc3 = True
+    #modelc3 = True
 else:
     i2c=SoftI2C(scl=Pin(4),sda=Pin(5))
     tmUpdate = Timer(1)
-    modelc3 = False
+    #modelc3 = False
 
 disp=sh1106.SH1106_I2C(128,64,i2c,None,0x3c,rotate=180)
 disp.fill(0)
@@ -89,8 +89,8 @@ def tryconnect(dispid):
       disp.text('Connect',0,0)
       disp.text(ssid,0,8)
       disp.show()
-      if modelc3:
-          wlan.config(txpower=8.5)
+      #if modelc3:
+      #    wlan.config(txpower=8.5)
       print('Connect %s' % (ssid))
       wlan.connect(ssid,passw)
       trycounter=0
