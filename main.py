@@ -1,7 +1,7 @@
 """ main. py """
 
 from machine import Timer, Pin, I2C, SoftI2C, RTC
-import micropython, re, time, network, socket, ntptime, configreader, sh1106, random, framebuf, ssl, uos
+import micropython, re, time, network, socket, ntptime, configreader, sh1106, random, framebuf, ssl, uos, onewire, ds18x20
 micropython.alloc_emergency_exception_buf(100)
 import vga2_8x8 as font1
 
@@ -49,6 +49,7 @@ else:
     f.write('key=\n')
     f.write('timezone=\n')
     f.write('timeout=\n')
+    f.write('tempsensor=\n')
     f.close()
     raise ConfigError
     
@@ -62,6 +63,7 @@ if tmzone=='':
     tzone=9
 else:
     tzone=int(tmzone)
+
 ctimeoffset=tzone*3600
 try:
     stimeout=config.option['timeout']
@@ -69,10 +71,23 @@ try:
 except:
     ctimeout=20
 
+try:
+    tempsensor=config.option['tempsensor']
+except:
+    tempsensor='0'
+
 if key=='':
     print('Missing info in config.txt.')
     raise ConfigError
 #print(config.option)
+
+if tempsensor=='1':
+    if uos.uname().machine.find("C3")>-1:
+        ds_sen = ds18x20.DS18X20(onewire.OneWire(Pin(7)))
+    else:
+        ds_sen = ds18x20.DS18X20(onewire.OneWire(Pin(7)))
+    roms = ds_sen.scan()
+    print('DS18x20 :', roms)
 
 delaych=['/','-','\\','|']
 # wifi connection
@@ -342,7 +357,7 @@ def drawtemp(x,y,t):
         disp.fill_rect(x+8,y,4*8+2,8,1)
         disp.hline(x+8,y+4,3,0)
         disp.text('%4.1f' % (-t),x+10,y,0)
-    
+
 def drawpop(x,y,pop):
     xp=int(pop*100)
     disp.fill_rect(x-1,y,4*8+2,8,1)
@@ -426,7 +441,7 @@ def cbUpdate(t):
     global timeupd
     
     timeupd+=1
-    if timeupd>=360:
+    if timeupd>360:
         tmUpdate.deinit()
         timeupd=0
         print("cbUpdate")
@@ -458,6 +473,19 @@ def cbUpdate(t):
         tmUpdate.init(period=1000, mode=Timer.PERIODIC, callback=cbUpdate)
     else:
         displayinfo(True)
+        # draw local temp
+        if tempsensor=='1':
+            if timeupd % 3!=0:
+                ds_sen.convert_temp()
+            else:
+                dstemp=85.0
+                for rom in roms:
+                    dstemp=ds_sen.read_temp(rom)
+                if timeupd % 6==0 and dstemp!=85.0:
+                    disp.fill_rect(0,0,11*8+2,8,0)
+                    drawtemp(random.randint(0,2),0,dstemp)
+                    disp.show()
+
         # Night mode
         rt=time.localtime(time.time()+winfo.timeoffset)
         if rt[3]>20 or rt[3]<7:
