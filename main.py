@@ -482,7 +482,7 @@ def cbUpdate(t):
                 for rom in roms:
                     dstemp=ds_sen.read_temp(rom)
                 if timeupd % 6==0 and dstemp!=85.0:
-                    disp.fill_rect(0,0,11*8+2,8,0)
+                    disp.fill_rect(0,0,12*8+2,8,0)
                     drawtemp(random.randint(0,2),0,dstemp)
                     disp.show()
 
