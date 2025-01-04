@@ -435,12 +435,15 @@ def displayinfo(bpop):
 timeoff=0
 showuvi=0
 timeupd=360
+ds_readcnt=2
 
 def cbUpdate(t):
     global timeoff
     global timeupd
+    global ds_readcnt
     
     timeupd+=1
+    ds_readcnt+=1
     if timeupd>360:
         tmUpdate.deinit()
         timeupd=0
@@ -475,16 +478,18 @@ def cbUpdate(t):
         displayinfo(True)
         # draw local temp
         if tempsensor=='1':
-            if timeupd % 3!=0:
+            if timeupd % 5==0:
                 ds_sen.convert_temp()
+                ds_readcnt=0
             else:
-                dstemp=85.0
-                for rom in roms:
-                    dstemp=ds_sen.read_temp(rom)
-                if timeupd % 6==0 and dstemp!=85.0:
-                    disp.fill_rect(0,0,12*8+2,8,0)
-                    drawtemp(random.randint(0,2),0,dstemp)
-                    disp.show()
+                if ds_readcnt==1:
+                    dstemp=85.0
+                    for rom in roms:
+                        dstemp=ds_sen.read_temp(rom)
+                    if dstemp!=85.0:
+                        disp.fill_rect(0,0,12*8+2,8,0)
+                        drawtemp(random.randint(0,2),0,dstemp)
+                        disp.show()
 
         # Night mode
         rt=time.localtime(time.time()+winfo.timeoffset)
