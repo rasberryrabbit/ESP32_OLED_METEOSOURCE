@@ -369,7 +369,11 @@ def drawrain(x,y,rain):
     
 def drawwind(x,y,wind):
     disp.text('W',x,y)
-    disp.text('%4.1f' % (wind),x+10,y)
+    if wind>=7.0:
+        disp.fill_rect(x+9,y,4*8+2,8,1)
+        disp.text('%4.1f' % (wind),x+10,y,0)        
+    else:
+        disp.text('%4.1f' % (wind),x+10,y)
     
 def loadpbm(x,y,fname):
     f=open(fname,'rb')
