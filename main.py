@@ -23,7 +23,7 @@ def fileexists(fn):
 if uos.uname().machine.find("C3")>-1:
     i2c=SoftI2C(scl=Pin(6),sda=Pin(5))
     # id 0 or 2
-    tmUpdate = Timer(2)
+    tmUpdate = Timer(1)
     #modelc3 = True
 else:
     i2c=SoftI2C(scl=Pin(4),sda=Pin(5))
