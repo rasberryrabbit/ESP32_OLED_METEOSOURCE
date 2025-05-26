@@ -47,9 +47,10 @@ else:
     f.write('lat=\n')
     f.write('lon=\n')
     f.write('key=\n')
-    f.write('timezone=\n')
-    f.write('timeout=\n')
-    f.write('tempsensor=\n')
+    f.write('timezone=9\n')
+    f.write('timeout=20\n')
+    f.write('tempsensor=0\n')
+    f.write('interval=360\n')
     f.close()
     raise ConfigError
     
@@ -59,10 +60,10 @@ lat=config.option['lat']
 lon=config.option['lon']
 key=config.option['key']
 tmzone=config.option['timezone']
-if tmzone=='':
-    tzone=9
-else:
+try:
     tzone=int(tmzone)
+except:
+    tzone=9
 
 ctimeoffset=tzone*3600
 try:
@@ -75,6 +76,13 @@ try:
     tempsensor=config.option['tempsensor']
 except:
     tempsensor='0'
+
+try:
+    timeint=config.option['interval']
+    tminterval=int(timeint)
+except:
+    tminterval=360
+
 
 if key=='':
     print('Missing info in config.txt.')
@@ -438,7 +446,7 @@ def displayinfo(bpop):
     
 timeoff=0
 showuvi=0
-timeupd=360
+timeupd=tminterval
 ds_readcnt=2
 
 def cbUpdate(t):
@@ -448,7 +456,7 @@ def cbUpdate(t):
     
     timeupd+=1
     ds_readcnt+=1
-    if timeupd>360:
+    if timeupd>tminterval:
         tmUpdate.deinit()
         timeupd=0
         print("cbUpdate")
