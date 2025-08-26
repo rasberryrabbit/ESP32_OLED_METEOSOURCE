@@ -2,6 +2,7 @@
 
 from machine import Timer, Pin, I2C, SoftI2C, RTC
 import micropython, re, time, network, socket, ntptime, configreader, sh1106, random, framebuf, ssl, uos, onewire, ds18x20
+import errno
 micropython.alloc_emergency_exception_buf(100)
 import vga2_8x8 as font1
 
@@ -189,6 +190,7 @@ class MeteoSource:
     lsinfo=None
     lastsynctime=0
     err=0
+    errmsg=''
     
     def __init__(self,lat,lon,key):
         self.last_remain=b''
@@ -197,6 +199,7 @@ class MeteoSource:
     
     def GetInfo(self):
         self.err=0
+        self.errmsg=''
         while True:
             y=time.localtime(time.time()+self.timeoffset)
             if y[0]>2000:
@@ -338,6 +341,7 @@ class MeteoSource:
                     break
         except Exception as e:
             self.err=e.errno
+            self.errmsg=errno.errorcode[e.errno]
             print(e)
             print(" parser")
         if sslsock:
@@ -440,8 +444,8 @@ def displayinfo(bpop):
             if winfo.lsinfo[9]>0:
                 drawrain(px+50,16,winfo.lsinfo[9])
             disp.text('%2d:00' % (dt[3]),px+50,24)
-            drawvline(px+45,8,24)            
-        disp.text('Error code: %d' %(winfo.err),px,40)
+            drawvline(px+45,8,24)
+        disp.text('Error : %s' %(winfo.errmsg),px,40)
     disp.show()
     
 timeoff=0
