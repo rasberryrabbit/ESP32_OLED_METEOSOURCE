@@ -502,8 +502,12 @@ def cbUpdate(t):
                 print('ok')
 
         except Exception as e:
-            print(e)
-            print(" Update")
+            s = StringIO()
+            sys.print_exception(e, s)
+            tracestr = s.getvalue()
+            print("cbUpdate : ")
+            print(tracestr)
+
         tmUpdate.init(period=1000, mode=Timer.PERIODIC, callback=cbUpdate)
     else:
         displayinfo(True)
