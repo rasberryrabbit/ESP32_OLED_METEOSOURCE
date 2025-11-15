@@ -23,6 +23,6 @@ pass=(wifi pass)
 lat=(your location)  
 lon=(your location)  
 key=(meteosource appid)  
-timezone=(timezone delta in hours)
+timezone=(timezone delta in hours, float)
   
   
