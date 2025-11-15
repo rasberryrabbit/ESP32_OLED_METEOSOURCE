@@ -3,6 +3,7 @@
 from machine import Timer, Pin, I2C, SoftI2C, RTC
 import micropython, re, time, network, socket, ntptime, configreader, sh1106, random, framebuf, ssl, uos, onewire, ds18x20
 import errno, sys
+from uio import StringIO
 micropython.alloc_emergency_exception_buf(100)
 import vga2_8x8 as font1
 from tzinfo import tztimezone
@@ -353,7 +354,10 @@ class MeteoSource:
                     break
 
         except Exception as e:
-            sys.print_exception(e)
+            s = StringIO()
+            sys.print_exception(e, s)
+            tracestr = s.getvalue()
+            print(tracestr)
 
         if sslsock:
             sslsock.close()
