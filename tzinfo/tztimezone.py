@@ -1,5 +1,14 @@
+import os, sys
 
-
+if __name__!="__main__":
+    i=__file__.rfind("/")
+    if i!=-1:
+        __path__=__file__[:i+1]
+    else:
+        __path__=""
+else:
+    __path__="tzinfo/"
+    
 def GetTimezone(zone):
     i = zone.find("/")
     if i!=-1:
@@ -9,13 +18,14 @@ def GetTimezone(zone):
         regi=zone
         conti="None"
 
-        
     tz=None
-
+    
     try:
-        f=open("tz%s.csv" % conti,"r")
+        f=open("%stz%s.csv" % (__path__,conti),"r")
     except:
-        f=open("tzNone.csv","r")
+        f=open("%stzNone.csv" % __path__,"r")
+
+    line=None
 
     while True:
         line=f.readline()
@@ -43,5 +53,6 @@ def GetTimezone(zone):
 
     return tm
 
-
-# print(GetTimezone("Asia/Kuala_Lumpur"))
+if __name__=="__main__":
+    print(GetTimezone("Asia/Katmandu"))
+    
