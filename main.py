@@ -2,9 +2,10 @@
 
 from machine import Timer, Pin, I2C, SoftI2C, RTC
 import micropython, re, time, network, socket, ntptime, configreader, sh1106, random, framebuf, ssl, uos, onewire, ds18x20
-import errno
+import errno, sys
 micropython.alloc_emergency_exception_buf(100)
 import vga2_8x8 as font1
+from tzinfo import tztimezone
 
 class ConfigError(RuntimeError):
     pass
@@ -62,11 +63,12 @@ lon=config.option['lon']
 key=config.option['key']
 tmzone=config.option['timezone']
 try:
-    tzone=int(tmzone)
+    tzone=float(tmzone)
 except:
-    tzone=9
+    tzone=9.0
 
-ctimeoffset=tzone*3600
+ctimeoffset=int(tzone*3600)
+
 try:
     stimeout=config.option['timeout']
     ctimeout=int(stimeout)
@@ -175,7 +177,7 @@ def synctime():
 # ntp time
 rtc=RTC()
 synctime()
-print(time.localtime(time.time()+tzone*3600))
+print(time.localtime(time.time()+int(tzone*3600)))
 
 # open weather
 class MeteoSource:
@@ -260,10 +262,20 @@ class MeteoSource:
                    spos=0
                    epos=0
                    # timezone
-                   tzi=re.search("timezone\":\s+?([^,]+),",data)
+                   tzi=re.search("timezone\":\"([^\",]+)",data)
                    if tzi:
                        stimezone=tzi.group(1)
-                       #self.timeoffset=0
+                       if stimezone:
+                           #print(stimezone)
+                           try:
+                               tz=tztimezone.GetTimezone(stimezone.decode('utf-8'))
+                           except:
+                               tz=None
+
+                           if tz:
+                               #print(tz)
+                               self.timeoffset=int(float(tz)*3600)
+
                    while True:
                        spos=data.decode().find("{\"date\":")
                        epos=data.decode().find("}}")
@@ -339,11 +351,10 @@ class MeteoSource:
                 # no data
                 else:
                     break
+
         except Exception as e:
-            self.err=e.errno
-            self.errmsg=errno.errorcode[e.errno]
-            print(e)
-            print(" parser")
+            sys.print_exception(e)
+
         if sslsock:
             sslsock.close()
         if sock:
@@ -412,7 +423,7 @@ def displayinfo(bpop):
             else:
                 print('error',wi[3])
             dt=time.localtime(wi[1])
-            disp.text('%s' % (wi[2].decode()[:12]),px+0,i)
+            disp.text('%s' % (wi[2].decode()[:11]),px+0,i)
             drawtemp(px+0,i+8,wi[5])
             drawwind(px+0,i+16,wi[6])
             disp.text('  %s' % (wi[7].decode()),px+0,i+24)
@@ -435,7 +446,7 @@ def displayinfo(bpop):
             else:
                 print('error',winfo.lsinfo[3])
             dt=time.localtime(winfo.lsinfo[1])
-            disp.text('%s' % (winfo.lsinfo[2].decode()[:12]),px+0,0)
+            disp.text('%s' % (winfo.lsinfo[2].decode()[:11]),px+0,0)
             drawtemp(px+0,8,winfo.lsinfo[5])
             drawwind(px+0,16,winfo.lsinfo[6])
             disp.text('  %s' % (winfo.lsinfo[7].decode()),px+0,24)
@@ -484,7 +495,7 @@ def cbUpdate(t):
 
             if winfo.imgoffset>2:
                 displayinfo(True)
-                print('ok')           
+                print('ok')
 
         except Exception as e:
             print(e)
@@ -503,7 +514,7 @@ def cbUpdate(t):
                     for rom in roms:
                         dstemp=ds_sen.read_temp(rom)
                     if dstemp!=85.0:
-                        disp.fill_rect(0,0,12*8+2,8,0)
+                        disp.fill_rect(0,0,11*8+2,8,0)
                         drawtemp(random.randint(0,2),0,dstemp)
                         disp.show()
 
