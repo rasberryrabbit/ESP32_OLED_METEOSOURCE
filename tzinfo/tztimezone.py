@@ -5,7 +5,7 @@ if __name__!="__main__":
     if i!=-1:
         __path__=__file__[:i+1]
     else:
-        __path__=""
+        __path__="tzinfo/"
 else:
     __path__="tzinfo/"
     
