@@ -8,6 +8,10 @@ micropython.alloc_emergency_exception_buf(100)
 import vga2_8x8 as font1
 from tzinfo import tztimezone
 
+# Webserver
+from micropyserver import MicroPyServer
+import utils
+
 class ConfigError(RuntimeError):
     pass
 
@@ -106,6 +110,7 @@ delaych=['/','-','\\','|']
 ignlist={}
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
+
 
 def tryconnect(dispid):
     global ssid, passw, ignlist
@@ -542,3 +547,66 @@ def cbUpdate(t):
 
         
 cbUpdate(0)
+
+# webserver
+configpara = {"ssid":ssid,"pass":passw,"latitude":lat,"longitude":lon,"key":key,"timezone":tmzone,"timeout":str(ctimeout),"tempsensor":tempsensor,"interval":str(tminterval)}
+
+def webconfigshow(request):
+    # head
+    f=open("webconfig_head.txt","r")
+    s=f.read()
+    f.close()
+    server.send(s)
+    # input
+    f=open("webconfig_input.txt","r")
+    s=f.read()
+    f.close()
+    for k,v in configpara.items():
+        if k=="pass" or k=="key":
+            v=""
+        res=s
+        res=res.replace("{%key}",k)
+        res=res.replace("{%value}",v)
+        server.send(res)
+    # tail
+    f=open("webconfig_tail.txt","r")
+    s=f.read()
+    f.close()
+    server.send(s)
+    
+def save_config():
+    f=open("config.txt","w")
+    for k,v in configpara.items():
+        if k=="latitude" or k=="longitude":
+            k=k[:3]
+        f.write(k)
+        f.write('=')
+        f.write(str(v))
+        f.write("\n")
+    f.close()
+    
+def webconfigsubmit(request):
+    params = utils.get_request_query_params(request)
+    for k,v in params.items():
+        if k in configpara:
+            v=v.replace('+',' ')
+            if k=='interval' or k=='timeout':
+                if v and v!="":
+                    if k=='interval' and int(v)<300:
+                        v="300"
+                    configpara[k]=int(v)
+            else:
+                if v and v!="":
+                    configpara[k]=v
+    save_config()
+    server.send("<html><body>ok<br/>Reboot needed</body></html>")
+    
+def webconfigstop(request):
+    server.send("<html><body>server stopped</body></html>")
+    server.stop()
+
+server = MicroPyServer()
+server.add_route("/", webconfigshow)
+server.add_route("/action_config", webconfigsubmit)
+server.add_route("/stop", webconfigstop)
+server.start()

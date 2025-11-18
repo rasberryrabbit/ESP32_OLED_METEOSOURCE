@@ -1,0 +1,1 @@
+<div class="input-group"><label>{%key}:</label><input type="text" name="{%key}" value="{%value}"></div>
