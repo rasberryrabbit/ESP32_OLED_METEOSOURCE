@@ -362,6 +362,7 @@ class MeteoSource:
             s = StringIO()
             sys.print_exception(e, s)
             tracestr = s.getvalue()
+            s.close()
             print(tracestr)
 
         if sslsock:
@@ -510,6 +511,7 @@ def cbUpdate(t):
             s = StringIO()
             sys.print_exception(e, s)
             tracestr = s.getvalue()
+            s.close()
             print("cbUpdate : ")
             print(tracestr)
 
