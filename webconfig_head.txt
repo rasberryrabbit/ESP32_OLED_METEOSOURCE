@@ -35,4 +35,5 @@
     <div>
     network pass and api key don't show.
     </div>
+    <br/>
     <form action="/action_config">
