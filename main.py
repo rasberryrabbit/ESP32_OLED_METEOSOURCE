@@ -29,13 +29,15 @@ def fileexists(fn):
 # display and timer init
 if uos.uname().machine.find("C3")>-1:
     i2c=SoftI2C(scl=Pin(6),sda=Pin(5))
+    Pin_setup = Pin(8, Pin.IN, Pin.PULL_UP)
     # id 0 or 2
     tmUpdate = Timer(1)
     #modelc3 = True
 else:
     i2c=SoftI2C(scl=Pin(4),sda=Pin(5))
+    Pin_setup = Pin(19, Pin.IN, Pin.PULL_UP)
     tmUpdate = Timer(1)
-    #modelc3 = False
+    #modelc3 = False  
 
 # unique id
 uid = machine.unique_id()
@@ -48,6 +50,8 @@ disp.contrast(0x5f)
 
 # read config
 needconfig=False
+if not Pin_setup.value():
+    needconfig=True
 
 config=configreader.ConfigReader()
 if fileexists('config.txt'):
@@ -105,7 +109,7 @@ if tempsensor=='1':
     if uos.uname().machine.find("C3")>-1:
         ds_sen = ds18x20.DS18X20(onewire.OneWire(Pin(7)))
     else:
-        ds_sen = ds18x20.DS18X20(onewire.OneWire(Pin(7)))
+        ds_sen = ds18x20.DS18X20(onewire.OneWire(Pin(18)))
     roms = ds_sen.scan()
     print('DS18x20 :', roms)
 
