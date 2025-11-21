@@ -2,7 +2,7 @@
 
 from machine import Timer, Pin, I2C, SoftI2C, RTC
 import micropython, re, time, network, socket, ntptime, configreader, sh1106, random, framebuf, ssl, uos, onewire, ds18x20
-import errno, sys
+import errno, sys, ubinascii, machine
 from uio import StringIO
 micropython.alloc_emergency_exception_buf(100)
 import vga2_8x8 as font1
@@ -37,36 +37,40 @@ else:
     tmUpdate = Timer(1)
     #modelc3 = False
 
+# unique id
+uid = machine.unique_id()
+esp_id = ubinascii.hexlify(uid).decode()
+
 disp=sh1106.SH1106_I2C(128,64,i2c,None,0x3c,rotate=180)
 disp.fill(0)
 disp.show()
 disp.contrast(0x5f)
 
-# read config       
+# read config
+needconfig=False
+
 config=configreader.ConfigReader()
 if fileexists('config.txt'):
     config.read('config.txt')
 else:
-    print('config.txt is missing. Writing sample.')
-    f=open('config.txt','w')
-    f.write('ssid=\n')
-    f.write('pass=\n')
-    f.write('lat=\n')
-    f.write('lon=\n')
-    f.write('key=\n')
-    f.write('timezone=9\n')
-    f.write('timeout=20\n')
-    f.write('tempsensor=0\n')
-    f.write('interval=360\n')
-    f.close()
-    raise ConfigError
+    needconfig=True
+    print('config.txt is missing.')
+
+try:
+    ssid=config.option['ssid']
+    passw=config.option['pass']
+    lat=config.option['lat']
+    lon=config.option['lon']
+    key=config.option['key']
+    tmzone=config.option['timezone']
+except:
+    ssid=""
+    passw=""
+    lat=""
+    lon=""
+    key=""
+    tmzone=""
     
-ssid=config.option['ssid']
-passw=config.option['pass']
-lat=config.option['lat']
-lon=config.option['lon']
-key=config.option['key']
-tmzone=config.option['timezone']
 try:
     tzone=float(tmzone)
 except:
@@ -92,9 +96,9 @@ except:
     tminterval=360
 
 
-if key=='':
+if key=='' or ssid=='':
     print('Missing info in config.txt.')
-    raise ConfigError
+    needconfig=True
 #print(config.option)
 
 if tempsensor=='1':
@@ -105,11 +109,16 @@ if tempsensor=='1':
     roms = ds_sen.scan()
     print('DS18x20 :', roms)
 
-delaych=['/','-','\\','|']
 # wifi connection
+delaych=['/','-','\\','|']
 ignlist={}
-wlan = network.WLAN(network.STA_IF)
-wlan.active(True)
+if needconfig:
+    wlan = network.WLAN(network.AP_IF)
+    wlan.active(True)
+    wlan.config(ssid="weather_%s" %esp_id,password="")
+else:
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
 
 
 def tryconnect(dispid):
@@ -163,7 +172,8 @@ def tryconnect(dispid):
           time.sleep_ms(500)
     print('network config:',wlan.ifconfig())
     
-tryconnect(True)
+if not needconfig:
+    tryconnect(True)
 
 def synctime():
     counter=0
@@ -182,8 +192,9 @@ def synctime():
 
 # ntp time
 rtc=RTC()
-synctime()
-print(time.localtime(time.time()+int(tzone*3600)))
+if not needconfig:
+    synctime()
+    print(time.localtime(time.time()+int(tzone*3600)))
 
 # open weather
 class MeteoSource:
@@ -547,8 +558,9 @@ def cbUpdate(t):
                 disp.contrast(0)
         timeoff+=1
 
-        
-cbUpdate(0)
+# start timer
+if not needconfig:
+    cbUpdate(0)
 
 # webserver
 configpara = {"ssid":ssid,"pass":passw,"latitude":lat,"longitude":lon,"key":key,"timezone":tmzone,"timeout":str(ctimeout),"tempsensor":tempsensor,"interval":str(tminterval)}
