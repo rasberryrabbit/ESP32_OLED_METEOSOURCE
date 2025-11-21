@@ -7,6 +7,8 @@ ESP32
 GND  -- GND  
 D4   -- SCL  
 D5   -- SDA  
+D18   -- 1 wire DS18B20 (optional)
+D19   -- Force enter config mode    
   
   
 ESP32C3-SuperMini  
@@ -14,7 +16,9 @@ ESP32C3-SuperMini
 3.3V -- VCC  
 GND  -- GND  
 D5   -- SCL  
-D6   -- SDA 
+D6   -- SDA  
+D7   -- 1 wire DS18B20 (optional)  
+D8   -- Force enter config mode  
   
   
 It need "config.txt" with requiring following info.  
