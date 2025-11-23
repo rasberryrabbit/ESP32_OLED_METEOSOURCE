@@ -7,7 +7,7 @@ ESP32
 GND    -- GND  
 GPIO22 -- SCL  
 GPIO21 -- SDA  
-GPIO4  -- 1 wire DS18B20 (optional)
+GPIO4  -- 1 wire DS18B20 (optional)  
 GPIO35 -- Force enter config mode    
   
   
