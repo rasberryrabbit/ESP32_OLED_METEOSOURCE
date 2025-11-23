@@ -3,22 +3,22 @@
 1.3" oled display 128x64. sh1106 controller.  
   
 ESP32  
-3.3V -- VCC  
-GND  -- GND  
-D4   -- SCL  
-D5   -- SDA  
-D18   -- 1 wire DS18B20 (optional)
-D19   -- Force enter config mode    
+3.3V   -- VCC  
+GND    -- GND  
+GPIO22 -- SCL  
+GPIO21 -- SDA  
+GPIO4  -- 1 wire DS18B20 (optional)
+GPIO35 -- Force enter config mode    
   
   
 ESP32C3-SuperMini  
   
-3.3V -- VCC  
-GND  -- GND  
-D5   -- SCL  
-D6   -- SDA  
-D7   -- 1 wire DS18B20 (optional)  
-D8   -- Force enter config mode  
+3.3V   -- VCC  
+GND    -- GND  
+GPIO9  -- SCL  
+GPIO8  -- SDA  
+GPIO0  -- 1 wire DS18B20 (optional)  
+GPIO10 -- Force enter config mode  
   
   
 It need "config.txt" with requiring following info.  
