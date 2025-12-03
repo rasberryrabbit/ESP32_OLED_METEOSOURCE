@@ -49,6 +49,8 @@ disp.fill(0)
 disp.show()
 disp.contrast(0x5f)
 
+use_debug=None
+
 # read config
 needconfig=False
 if not Pin_setup.value():
@@ -98,7 +100,7 @@ try:
     timeint=config.option['interval']
     tminterval=int(timeint)
 except:
-    tminterval=360
+    tminterval=600
 
 
 if key=='' or ssid=='':
@@ -187,7 +189,7 @@ def synctime():
             ntptime.settime()
             break
         except Exception as e:
-            print(e)
+            print(str(e))
             print("sync time")
             disp.fill_rect(120,0,9,8,0)
             disp.text(delaych[counter % 4],120,0)
@@ -211,7 +213,7 @@ class MeteoSource:
     firststamp=0
     error_count=0
     weinfo=[]
-    lsinfo=None
+    lsinfo=[]
     lastsynctime=0
     err=0
     errmsg=''
@@ -375,11 +377,16 @@ class MeteoSource:
                     break
 
         except Exception as e:
-            s = StringIO()
-            sys.print_exception(e, s)
-            tracestr = s.getvalue()
-            s.close()
-            print(tracestr)
+            if use_debug:
+                s = StringIO()
+                sys.print_exception(e, s)
+                tracestr = s.getvalue()
+                s.close()
+                print(tracestr)
+            else:
+                self.err = e.errno
+                self.errmsg = str(e)
+                print(self.errmsg)
 
         if sslsock:
             sslsock.close()
@@ -435,7 +442,7 @@ def loadpbm(x,y,fname):
         data[i]=~v
     fimg=framebuf.FrameBuffer(data,32,32,framebuf.MONO_HLSB)
     disp.blit(fimg,x,y)
-
+   
 def displayinfo(bpop):
     #[dayw,dayww,weath,weicon,summary,ttemp,windspd,winddir,cloud,rain]
     i=0
@@ -460,29 +467,38 @@ def displayinfo(bpop):
             disp.text('%2d:00' % (dt[3]),px+50,i+24)
             drawvline(px+45,i+8,24)
             i+=32
+            # append valid info
             if idx==0:
-                winfo.lsinfo=wi
+                winfo.lsinfo=[]
+            winfo.lsinfo.append(wi)
             if idx==1:
                 break
             idx+=1
     else:
-        if winfo.lsinfo:
-            if fileexists(winfo.lsinfo[3]):
-                loadpbm(px+90,0,winfo.lsinfo[3])
+        # display last valid information
+        for wi in winfo.lsinfo:
+            if fileexists(wi[3]):
+                loadpbm(px+90,i,wi[3])
             else:
-                print('error',winfo.lsinfo[3])
-            dt=time.localtime(winfo.lsinfo[1])
-            disp.text('%s' % (winfo.lsinfo[2].decode()[:11]),px+0,0)
-            drawtemp(px+0,8,winfo.lsinfo[5])
-            drawwind(px+0,16,winfo.lsinfo[6])
-            disp.text('  %s' % (winfo.lsinfo[7].decode()),px+0,24)
-            if winfo.lsinfo[8]>0:
-                disp.text(' %3d%%' % (winfo.lsinfo[8]), px+50, 8)
-            if winfo.lsinfo[9]>0:
-                drawrain(px+50,16,winfo.lsinfo[9])
-            disp.text('%2d:00' % (dt[3]),px+50,24)
-            drawvline(px+45,8,24)
-        disp.text('Error : %s' %(winfo.errmsg),px,40)
+                print('error',wi[3])
+            dt=time.localtime(wi[1])
+            if idx==0:
+                disp.text('Error : %d' % (winfo.err),px+0,i)
+            else:
+                disp.text('%s' % (wi[2].decode()[:11]),px+0,i)
+            drawtemp(px+0,i+8,wi[5])
+            drawwind(px+0,i+16,wi[6])
+            disp.text('  %s' % (wi[7].decode()),px+0,i+24)
+            if wi[8]>0:
+                disp.text(' %3d%%' % (wi[8]), px+50, i+8)
+            if wi[9]>0:
+                drawrain(px+50,i+16,wi[9])
+            disp.text('%2d:00' % (dt[3]),px+50,i+24)
+            drawvline(px+45,i+8,24)
+            i+=32
+            if idx==1:
+                break
+            idx+=1
     disp.show()
     
 timeoff=0
@@ -524,12 +540,17 @@ def cbUpdate(t):
                 print('ok')
 
         except Exception as e:
-            s = StringIO()
-            sys.print_exception(e, s)
-            tracestr = s.getvalue()
-            s.close()
-            print("cbUpdate : ")
-            print(tracestr)
+            if use_debug:
+                s = StringIO()
+                sys.print_exception(e, s)
+                tracestr = s.getvalue()
+                s.close()
+                print("cbUpdate : ")
+                print(tracestr)
+            else:
+                winfo.err = e.err
+                winfo.errmsg = str(e)
+                print(winfo.errmsg)
 
         tmUpdate.init(period=1000, mode=Timer.PERIODIC, callback=cbUpdate)
     else:
