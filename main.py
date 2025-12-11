@@ -1,8 +1,8 @@
 """ main. py """
 
-from machine import Timer, Pin, I2C, SoftI2C, RTC
+from machine import Timer, Pin, I2C, SoftI2C, RTC, SPI
 import micropython, re, time, network, socket, ntptime, configreader, sh1106, random, framebuf, ssl, uos, onewire, ds18x20
-import errno, sys, ubinascii, machine
+import errno, sys, ubinascii, machine, epaper1in54
 from uio import StringIO
 micropython.alloc_emergency_exception_buf(100)
 import vga2_8x8 as font1
@@ -29,6 +29,8 @@ def fileexists(fn):
 # display and timer init
 if uos.uname().machine.find("C3")>-1:
     i2c=I2C(0, scl=Pin(9),sda=Pin(8) )
+    spi=SPI(1)
+    spi.init(sck=Pin(4),mosi=Pin(6),miso=None)
     Pin_setup = Pin(10, Pin.IN, Pin.PULL_UP)
     # id 0 or 2
     tmUpdate = Timer(1)
@@ -44,12 +46,28 @@ else:
 uid = machine.unique_id()
 esp_id = ubinascii.hexlify(uid).decode()
 
+
 disp=sh1106.SH1106_I2C(128,64,i2c,None,0x3c,rotate=180)
 disp.fill(0)
 disp.show()
 disp.contrast(0x5f)
 
-use_debug=None
+#ep=epaper1in54.EPD(spi,cs=Pin(20),dc=Pin(3),rst=Pin(2),busy=Pin(1))
+#ep.init()
+#w=ep.width
+#h=ep.height
+#x=0
+#y=0
+#ep.clear_frame_memory(b'\xff')
+#ep.display_frame()
+#dispbuf=bytearray(ep.width * ep.height // 8)
+#disp = framebuf.FrameBuffer(dispbuf, ep.width, ep.height, framebuf.MONO_HLSB)
+
+#def disp_show():
+#    ep.set_frame_memory(dispbuf, x, y, w, h)
+#    ep.display_frame()
+ 
+use_debug=True
 
 # read config
 needconfig=False
