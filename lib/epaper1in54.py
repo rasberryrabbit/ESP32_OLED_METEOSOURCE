@@ -142,7 +142,7 @@ class EPD:
         self._command(WRITE_RAM)
         # send the color data
         for i in range(0, self.width // 8 * self.height):
-            self._data(bytearray([color]))
+            self._data(bytearray([color][0]))
 
     # draw the current frame memory and switch to the next memory area
     def display_frame(self):
