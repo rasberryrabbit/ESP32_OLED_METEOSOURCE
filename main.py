@@ -645,8 +645,9 @@ def webconfigstop(request):
     server.send("<html><body>server stopped</body></html>")
     server.stop()
 
-server = MicroPyServer()
-server.add_route("/", webconfigshow)
-server.add_route("/action_config", webconfigsubmit)
-server.add_route("/stop", webconfigstop)
-server.start()
+if needconfig:
+    server = MicroPyServer()
+    server.add_route("/", webconfigshow)
+    server.add_route("/action_config", webconfigsubmit)
+    server.add_route("/stop", webconfigstop)
+    server.start()
