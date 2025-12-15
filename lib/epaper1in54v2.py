@@ -226,3 +226,7 @@ class EPD:
     def sleep(self):
         self._command(DEEP_SLEEP_MODE, b'\x01') # enter deep sleep A0=1, A0=0 power on
         self.wait_until_idle()
+
+    def display(self, image):
+        self.set_frame_memory(image,0,0,self.width,self.height)
+        self.display_frame()
