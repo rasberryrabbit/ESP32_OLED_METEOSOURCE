@@ -39,7 +39,7 @@ BOOSTER_SOFT_START_CONTROL           = const(0x0C)
 #GATE_SCAN_START_POSITION             = const(0x0F)
 DEEP_SLEEP_MODE                      = const(0x10)
 DATA_ENTRY_MODE_SETTING              = const(0x11)
-#SW_RESET                             = const(0x12)
+SW_RESET                             = const(0x12)
 #TEMPERATURE_SENSOR_CONTROL           = const(0x1A)
 MASTER_ACTIVATION                    = const(0x20)
 #DISPLAY_UPDATE_CONTROL_1             = const(0x21)
@@ -91,6 +91,7 @@ class EPD:
 
     def init(self):
         self.reset()
+        self._command(SW_RESET)
         self._command(DRIVER_OUTPUT_CONTROL)
         self._data(bytearray([(EPD_HEIGHT - 1) & 0xFF]))
         self._data(bytearray([((EPD_HEIGHT - 1) >> 8) & 0xFF]))
@@ -101,6 +102,8 @@ class EPD:
         self._command(SET_GATE_TIME, b'\x08') # 2us per line
         self._command(DATA_ENTRY_MODE_SETTING, b'\x03') # X increment Y increment
         self.set_lut(self.LUT_FULL_UPDATE)
+        self._command(DISPLAY_UPDATE_CONTROL_2,b'\xb1')
+        self._command(MASTER_ACTIVATION)
 
     def wait_until_idle(self):
         while self.busy.value() == BUSY:
@@ -108,9 +111,9 @@ class EPD:
 
     def reset(self):
         self.rst(0)
-        sleep_ms(200)
+        sleep_ms(10)
         self.rst(1)
-        sleep_ms(200)
+        sleep_ms(10)
 
     def set_lut(self, lut):
         self._command(WRITE_LUT_REGISTER, lut)
@@ -146,7 +149,7 @@ class EPD:
 
     # draw the current frame memory and switch to the next memory area
     def display_frame(self):
-        self._command(DISPLAY_UPDATE_CONTROL_2, b'\xC4')
+        self._command(DISPLAY_UPDATE_CONTROL_2, b'\xC7')
         self._command(MASTER_ACTIVATION)
         self._command(TERMINATE_FRAME_READ_WRITE)
         self.wait_until_idle()
