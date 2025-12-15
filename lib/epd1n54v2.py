@@ -99,6 +99,7 @@ class EPD:
         self.busy.init(self.busy.IN)
         self.width = EPD_WIDTH
         self.height = EPD_HEIGHT
+        self.fast = True
     
     def send_command(self, command):
         self.dc(0)  # LOW
@@ -157,15 +158,16 @@ class EPD:
         self.send_command(b'\x11')  # data entry mode
         self.send_data(b'\x01')
         
-        #self.send_command(b'\x44')  # set Ram-X address start/end position
-        #self.send_data(b'\x00')
-        #self.send_data(b'\x18')  # 0x18 -> (24+1)*8=200
-        
-        #self.send_command(b'\x45')  # set Ram-Y address start/end position
-        #self.send_data(b'\xC7')  # 0xC7 -> (199+1)=200
-        #self.send_data(b'\x00')
-        #self.send_data(b'\x00')
-        #self.send_data(b'\x00')
+        if not self.fast:
+            self.send_command(b'\x44')  # set Ram-X address start/end position
+            self.send_data(b'\x00')
+            self.send_data(b'\x18')  # 0x18 -> (24+1)*8=200
+            
+            self.send_command(b'\x45')  # set Ram-Y address start/end position
+            self.send_data(b'\xC7')  # 0xC7 -> (199+1)=200
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
         
         self.send_command(b'\x3C')  # BorderWaveform
         self.send_data(b'\x01')
@@ -177,12 +179,13 @@ class EPD:
         self.send_data(b'\xB1')
         self.send_command(b'\x20')
         
-        #self.send_command(b'\x4E')  # set RAM x address count to 0
-        #self.send_data(b'\x00')
-        #self.send_command(b'\x4F')  # set RAM y address count to 0x199
-        #self.send_data(b'\xC7')
-        #self.send_data(b'\x00')
-        #self.wait_until_idle()
+        if not self.fast:
+            self.send_command(b'\x4E')  # set RAM x address count to 0
+            self.send_data(b'\x00')
+            self.send_command(b'\x4F')  # set RAM y address count to 0x199
+            self.send_data(b'\xC7')
+            self.send_data(b'\x00')
+            self.wait_until_idle()
         
         self.set_lut(WF_Full_1IN54)
 
@@ -203,16 +206,17 @@ class EPD:
         self.send_command(b'\x11')  # data entry mode
         self.send_data(b'\x03')
         
-        #self.send_command(b'\x44')
-        # x point must be the multiple of 8 or the last 3 bits will be ignored
-        #self.send_data(bytearray([(0 >> 3) & 0xFF]))
-        #self.send_data(bytearray([(199 >> 3) & 0xFF]))
-        
-        #self.send_command(b'\x45')
-        #self.send_data(bytearray([0 & 0xFF]))
-        #self.send_data(bytearray([(0 >> 8) & 0xFF]))
-        #self.send_data(bytearray([199 & 0xFF]))
-        #self.send_data(bytearray([(199 >> 8) & 0xFF]))
+        if not self.fast:
+            self.send_command(b'\x44')
+            # x point must be the multiple of 8 or the last 3 bits will be ignored
+            self.send_data(bytearray([(0 >> 3) & 0xFF]))
+            self.send_data(bytearray([(199 >> 3) & 0xFF]))
+            
+            self.send_command(b'\x45')
+            self.send_data(bytearray([0 & 0xFF]))
+            self.send_data(bytearray([(0 >> 8) & 0xFF]))
+            self.send_data(bytearray([199 & 0xFF]))
+            self.send_data(bytearray([(199 >> 8) & 0xFF]))
         
         self.send_command(b'\x3C')  # BorderWaveform
         self.send_data(b'\x01')
@@ -224,12 +228,13 @@ class EPD:
         self.send_data(b'\xB1')
         self.send_command(b'\x20')
         
-        #self.send_command(b'\x4E')  # set RAM x address count to 0
-        #self.send_data(b'\x00')
-        #self.send_command(b'\x4F')  # set RAM y address count to 0x199
-        #self.send_data(b'\xC7')
-        #self.send_data(b'\x00')
-        #self.wait_until_idle()
+        if not self.fast:
+            self.send_command(b'\x4E')  # set RAM x address count to 0
+            self.send_data(b'\x00')
+            self.send_command(b'\x4F')  # set RAM y address count to 0x199
+            self.send_data(b'\xC7')
+            self.send_data(b'\x00')
+            self.wait_until_idle()
         
         self.set_lut(WF_Full_1IN54)
 
@@ -242,19 +247,26 @@ class EPD:
         self.rst(1)  # HIGH
         sleep_ms(20)
     
-    def clear(self):
-        
+    def clear(self,color=b'\xff'):
         self.send_command(b'\x24')
-        for j in range(h):
-            for i in range(w):
-                self.send_data(b'\xff')
+        for j in range(self.width // 8 * self.height):
+            self.send_data(color)
 
         # DISPLAY REFRESH
         self.display_frame()
     
     def display(self, frame_buffer):
-        
         self.set_frame_memory(frame_buffer,0,0,self.width,self.height)        
+        # DISPLAY REFRESH
+        self.display_frame()
+        
+    def display_upper(self, frame_buffer):
+        self.set_frame_memory(frame_buffer,0,0,self.width,self.height // 2)        
+        # DISPLAY REFRESH
+        self.display_frame()
+    
+    def display_bottom(self, frame_buffer):
+        self.set_frame_memory(frame_buffer,0,self.height // 2,self.width,self.height // 2)        
         # DISPLAY REFRESH
         self.display_frame()
     
