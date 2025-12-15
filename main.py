@@ -1,16 +1,17 @@
 """ main. py """
 
-from machine import Timer, Pin, I2C, SoftI2C, RTC, SPI
-import micropython, re, time, network, socket, ntptime, configreader, sh1106, random, framebuf, ssl, uos, onewire, ds18x20
-import errno, sys, ubinascii, machine, epaper1in54
-from uio import StringIO
+use_epd=False
+use_debug=False
+
+from machine import Timer, Pin, I2C, RTC, SPI
+import micropython, re, time, network, socket, ntptime, configreader, random, ssl, uos
+import errno, sys, ubinascii, machine
+import framebuf2 as framebuf
+if use_debug:
+    from uio import StringIO
 micropython.alloc_emergency_exception_buf(100)
 import vga2_8x8 as font1
 from tzinfo import tztimezone
-
-# Webserver
-from micropyserver import MicroPyServer
-import utils
 
 class ConfigError(RuntimeError):
     pass
@@ -28,17 +29,30 @@ def fileexists(fn):
 
 # display and timer init
 if uos.uname().machine.find("C3")>-1:
-    i2c=I2C(0, scl=Pin(9),sda=Pin(8) )
-    spi=SPI(1)
-    spi.init(sck=Pin(4),mosi=Pin(6),miso=None)
+    if not use_epd:
+        i2c=I2C(0, scl=Pin(9),sda=Pin(8) )
+    else:
+        import epd1n54v2
+        spi=SPI(1)
+        spi.init(sck=Pin(4),mosi=Pin(6),miso=None)
+        e = epd1n54v2.EPD(spi, cs=Pin(20), dc=Pin(3), rst=Pin(2), busy=Pin(1))
+        e.init()
     Pin_setup = Pin(10, Pin.IN, Pin.PULL_UP)
     # id 0 or 2
     tmUpdate = Timer(1)
     #modelc3 = True
 else:
     # not tested.
-    i2c=I2C(0, scl=Pin(22),sda=Pin(21))
-    Pin_setup = Pin(35, Pin.IN, Pin.PULL_UP)
+    if not use_epd:
+        import sh1106
+        i2c=I2C(0, scl=Pin(22),sda=Pin(21))
+    else:
+        import epd1n54v2
+        spi=SPI(2, sck=Pin(18), mosi=Pin(23))
+        spi.init()
+        e = epd1n54v2.EPD(spi, cs=Pin(14), dc=Pin(12), rst=Pin(13), busy=Pin(4))
+        e.init()
+    Pin_setup = Pin(5, Pin.IN, Pin.PULL_UP)
     tmUpdate = Timer(1)
     #modelc3 = False  
 
@@ -46,32 +60,27 @@ else:
 uid = machine.unique_id()
 esp_id = ubinascii.hexlify(uid).decode()
 
-
-disp=sh1106.SH1106_I2C(128,64,i2c,None,0x3c,rotate=180)
-disp.fill(0)
-disp.show()
-disp.contrast(0x5f)
-
-#ep=epaper1in54.EPD(spi,cs=Pin(20),dc=Pin(3),rst=Pin(2),busy=Pin(1))
-#ep.init()
-#w=ep.width
-#h=ep.height
-#x=0
-#y=0
-#ep.clear_frame_memory(b'\xff')
-#ep.display_frame()
-#dispbuf=bytearray(ep.width * ep.height // 8)
-#disp = framebuf.FrameBuffer(dispbuf, ep.width, ep.height, framebuf.MONO_HLSB)
-
-#def disp_show():
-#    ep.set_frame_memory(dispbuf, x, y, w, h)
-#    ep.display_frame()
+if not use_epd:
+    import sh1106
+    disp=sh1106.SH1106_I2C(128,64,i2c,None,0x3c,rotate=180)
+    disp.fill(0)
+    disp.show()
+    disp.contrast(0x5f)
+else:
+    dispbuf=bytearray(e.width // 8 * e.height)
+    disp=framebuf.FrameBuffer(dispbuf, e.width, e.height, framebuf.MONO_HLSB)
+    
+def disp_show():
+    if not use_epd:
+        disp.show()
+    else:
+        e.display(dispbuf)
+        
  
-use_debug=True
-
 # read config
 needconfig=False
 if not Pin_setup.value():
+    print('config')
     needconfig=True
 
 config=configreader.ConfigReader()
@@ -127,6 +136,7 @@ if key=='' or ssid=='':
 #print(config.option)
 
 if tempsensor=='1':
+    import onewire, ds18x20
     if uos.uname().machine.find("C3")>-1:
         ds_sen = ds18x20.DS18X20(onewire.OneWire(Pin(0)))
     else:
@@ -154,7 +164,7 @@ def tryconnect(dispid):
     if not wlan.isconnected():
       disp.text('Connect',0,0)
       disp.text(ssid,0,8)
-      disp.show()
+      disp_show()
       #if modelc3:
       #    wlan.config(txpower=8.5)
       print('Connect %s' % (ssid))
@@ -193,7 +203,7 @@ def tryconnect(dispid):
                   print('ReConnect %s' % (ssid))
           disp.fill_rect(120,0,9,8,0)
           disp.text(delaych[trycounter % 4],120,0)
-          disp.show()
+          disp_show()
           time.sleep_ms(500)
     print('network config:',wlan.ifconfig())
     
@@ -211,7 +221,7 @@ def synctime():
             print("sync time")
             disp.fill_rect(120,0,9,8,0)
             disp.text(delaych[counter % 4],120,0)
-            disp.show()
+            disp_show()
             counter+=1
         time.sleep(1)
 
@@ -460,6 +470,8 @@ def loadpbm(x,y,fname):
         data[i]=~v
     fimg=framebuf.FrameBuffer(data,32,32,framebuf.MONO_HLSB)
     disp.blit(fimg,x,y)
+    data=[]
+    fimg=None
    
 def displayinfo(bpop):
     #[dayw,dayww,weath,weicon,summary,ttemp,windspd,winddir,cloud,rain]
@@ -517,7 +529,7 @@ def displayinfo(bpop):
             if idx==1:
                 break
             idx+=1
-    disp.show()
+    disp_show()
     
 timeoff=0
 showuvi=0
@@ -572,7 +584,8 @@ def cbUpdate(t):
 
         tmUpdate.init(period=1000, mode=Timer.PERIODIC, callback=cbUpdate)
     else:
-        displayinfo(True)
+        if not use_epd:
+            displayinfo(True)
         # draw local temp
         if tempsensor=='1':
             if timeupd % 5==0:
@@ -586,85 +599,89 @@ def cbUpdate(t):
                     if dstemp!=85.0:
                         disp.fill_rect(0,0,11*8+2,8,0)
                         drawtemp(random.randint(0,2),0,dstemp)
-                        disp.show()
+                        disp_show()
 
         # Night mode
-        rt=time.localtime(time.time()+winfo.timeoffset)
-        if rt[3]>20 or rt[3]<7:
-            if timeoff>=5:
-                timeoff=0
-                disp.contrast(0)
-        else:
-            if timeoff>=5:
-                timeoff=0
-                disp.contrast(0x5f)
-            elif timeoff==3:
-                disp.contrast(0)
+        if not use_epd:
+            rt=time.localtime(time.time()+winfo.timeoffset)
+            if rt[3]>20 or rt[3]<7:
+                if timeoff>=5:
+                    timeoff=0
+                    disp.contrast(0)
+            else:
+                if timeoff>=5:
+                    timeoff=0
+                    disp.contrast(0x5f)
+                elif timeoff==3:
+                    disp.contrast(0)
         timeoff+=1
 
 # start timer
 if not needconfig:
     cbUpdate(0)
-
-# webserver
-configpara = {"ssid":ssid,"pass":passw,"latitude":lat,"longitude":lon,"key":key,"timezone":tmzone,"timeout":str(ctimeout),"tempsensor":tempsensor,"interval":str(tminterval)}
-
-def webconfigshow(request):
-    # head
-    f=open("webconfig_head.txt","r")
-    s=f.read()
-    f.close()
-    server.send(s)
-    # input
-    f=open("webconfig_input.txt","r")
-    s=f.read()
-    f.close()
-    for k,v in configpara.items():
-        if k=="pass" or k=="key":
-            v=""
-        res=s
-        res=res.replace("{%key}",k)
-        res=res.replace("{%value}",v)
-        server.send(res)
-    # tail
-    f=open("webconfig_tail.txt","r")
-    s=f.read()
-    f.close()
-    server.send(s)
-    
-def save_config():
-    f=open("config.txt","w")
-    for k,v in configpara.items():
-        if k=="latitude" or k=="longitude":
-            k=k[:3]
-        f.write(k)
-        f.write('=')
-        f.write(str(v))
-        f.write("\n")
-    f.close()
-    
-def webconfigsubmit(request):
-    params = utils.get_request_query_params(request)
-    for k,v in params.items():
-        if k in configpara:
-            v=v.replace('+',' ')
-            if k=='interval' or k=='timeout':
-                if v and v!="":
-                    if k=='interval' and int(v)<300:
-                        v="300"
-                    configpara[k]=int(v)
-            else:
-                if v and v!="":
-                    configpara[k]=v
-    save_config()
-    server.send("<html><body>ok<br/>Reboot needed</body></html>")
-    
-def webconfigstop(request):
-    server.send("<html><body>server stopped</body></html>")
-    server.stop()
-
-if needconfig:
+else:
+    # Webserver
+    from micropyserver import MicroPyServer
+    import utils
     server = MicroPyServer()
+
+    # webserver
+    configpara = {"ssid":ssid,"pass":passw,"latitude":lat,"longitude":lon,"key":key,"timezone":tmzone,"timeout":str(ctimeout),"tempsensor":tempsensor,"interval":str(tminterval)}
+
+    def webconfigshow(request):
+        # head
+        f=open("webconfig_head.txt","r")
+        s=f.read()
+        f.close()
+        server.send(s)
+        # input
+        f=open("webconfig_input.txt","r")
+        s=f.read()
+        f.close()
+        for k,v in configpara.items():
+            if k=="pass" or k=="key":
+                v=""
+            res=s
+            res=res.replace("{%key}",k)
+            res=res.replace("{%value}",v)
+            server.send(res)
+        # tail
+        f=open("webconfig_tail.txt","r")
+        s=f.read()
+        f.close()
+        server.send(s)
+        
+    def save_config():
+        f=open("config.txt","w")
+        for k,v in configpara.items():
+            if k=="latitude" or k=="longitude":
+                k=k[:3]
+            f.write(k)
+            f.write('=')
+            f.write(str(v))
+            f.write("\n")
+        f.close()
+        
+    def webconfigsubmit(request):
+        params = utils.get_request_query_params(request)
+        for k,v in params.items():
+            if k in configpara:
+                v=v.replace('+',' ')
+                if k=='interval' or k=='timeout':
+                    if v and v!="":
+                        if k=='interval' and int(v)<300:
+                            v="300"
+                        configpara[k]=int(v)
+                else:
+                    if v and v!="":
+                        configpara[k]=v
+        save_config()
+        server.send("<html><body>ok<br/>Reboot needed</body></html>")
+        
+    def webconfigstop(request):
+        server.send("<html><body>server stopped</body></html>")
+        server.stop()
+
     server.add_route("/", webconfigshow)
     server.add_route("/action_config", webconfigsubmit)
     server.add_route("/stop", webconfigstop)
