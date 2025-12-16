@@ -6,7 +6,8 @@ use_debug=False
 from machine import Timer, Pin, I2C, RTC, SPI
 import micropython, re, time, network, socket, ntptime, configreader, random, ssl, uos
 import errno, sys, ubinascii, machine
-import framebuf2 as framebuf
+#import framebuf2 as framebuf
+import framebuf
 if use_debug:
     from uio import StringIO
 micropython.alloc_emergency_exception_buf(100)
@@ -279,7 +280,8 @@ class MeteoSource:
             sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(ctimeout)
             sock.connect(saddr)
-            sslsock=ssl.wrap_socket(sock)
+            context=ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            sslsock=context.wrap_socket(sock)
 
             self.last_remain=b''
             self.ContLen=-1
