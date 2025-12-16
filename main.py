@@ -141,7 +141,7 @@ if tempsensor=='1':
     if uos.uname().machine.find("C3")>-1:
         ds_sen = ds18x20.DS18X20(onewire.OneWire(Pin(0)))
     else:
-        ds_sen = ds18x20.DS18X20(onewire.OneWire(Pin(4)))
+        ds_sen = ds18x20.DS18X20(onewire.OneWire(Pin(32)))
     roms = ds_sen.scan()
     print('DS18x20 :', roms)
 

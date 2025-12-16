@@ -7,8 +7,8 @@ ESP32
 GND    -- GND  
 GPIO22 -- SCL  
 GPIO21 -- SDA  
-GPIO4  -- 1 wire DS18B20 (optional)  
-GPIO35 -- Force enter config mode on Power up  
+GPIO32  -- 1 wire DS18B20 (optional)  
+GPIO5 -- Force enter config mode on Power up  
   
   
 ESP32C3-SuperMini  
