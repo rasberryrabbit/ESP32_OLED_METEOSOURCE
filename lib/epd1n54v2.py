@@ -99,7 +99,7 @@ class EPD:
         self.busy.init(self.busy.IN)
         self.width = EPD_WIDTH
         self.height = EPD_HEIGHT
-        self.fast = True
+        self.fast = False
     
     def send_command(self, command):
         self.dc(0)  # LOW
