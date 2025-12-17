@@ -1,6 +1,6 @@
 """ main. py """
 
-use_epd=False
+use_epd=True
 use_debug=True
 bcol=0
 wcol=1
@@ -43,11 +43,10 @@ if uos.uname().machine.find("C3")>-1:
     Pin_setup = Pin(10, Pin.IN, Pin.PULL_UP)
     # id 0 or 2
     tmUpdate = Timer(1)
-    #modelc3 = True
+    modelc3 = True
 else:
     # not tested.
     if not use_epd:
-        import sh1106
         i2c=I2C(0, scl=Pin(22),sda=Pin(21))
     else:
         import epd1n54v2
@@ -57,7 +56,7 @@ else:
         e.init()
     Pin_setup = Pin(5, Pin.IN, Pin.PULL_UP)
     tmUpdate = Timer(1)
-    #modelc3 = False  
+    modelc3 = False  
 
 # unique id
 uid = machine.unique_id()
@@ -75,6 +74,7 @@ else:
     dispbuf=bytearray(200 * 96 // 8)
     disp=framebuf.FrameBuffer(dispbuf, 200, 96, framebuf.MONO_HLSB)
     disp.fill(bcol)
+    e.display_part_base_white_image()
     e.display_part_base_white_image()
     e.init(True)
     
@@ -160,15 +160,23 @@ delaych=['/','-','\\','|']
 ignlist={}
 if needconfig:
     wlan = network.WLAN(network.AP_IF)
+    wlan.active(False)
+    time.sleep(0.5)
     wlan.active(True)
+    if modelc3:
+        wlan.config(txpower=7.0)
     wlan.config(ssid="weather_%s" %esp_id,password="")
 else:
     wlan = network.WLAN(network.STA_IF)
+    wlan.active(False)
+    time.sleep(0.5)
     wlan.active(True)
-
+    if modelc3:
+        wlan.config(txpower=7.0) # 8.5
 
 def tryconnect(dispid):
     global ssid, passw, ignlist
+
     wlan.disconnect()
     while wlan.isconnected():
         pass
@@ -176,8 +184,6 @@ def tryconnect(dispid):
       disp.text('Connect',0,0,wcol)
       disp.text(ssid,0,8,wcol)
       disp_show()
-      #if modelc3:
-      #    wlan.config(txpower=8.5)
       print('Connect %s' % (ssid))
       wlan.connect(ssid,passw)
       trycounter=0
@@ -215,7 +221,7 @@ def tryconnect(dispid):
           disp.fill_rect(120,0,9,8,bcol)
           disp.text(delaych[trycounter % 4],120,0,wcol)
           disp_show()
-          time.sleep_ms(500)
+          time.sleep_ms(1000)
     print('network config:',wlan.ifconfig())
     
 if not needconfig:
