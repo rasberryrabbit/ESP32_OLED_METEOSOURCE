@@ -104,7 +104,7 @@ class EPD:
         self.send_command(bytearray([0x4E]))  # SET_RAM_X_ADDRESS_COUNTER
         self.send_data(bytearray([x_start & 0xFF]))
 
-        self.send_command(bytearray([0x4F)  # SET_RAM_Y_ADDRESS_COUNTER
+        self.send_command(bytearray([0x4F]))  # SET_RAM_Y_ADDRESS_COUNTER
         self.send_data(bytearray([y_start & 0xFF]))
         self.send_data(bytearray([(y_start >> 8) & 0xFF]))
 
