@@ -1,7 +1,7 @@
 """ main. py """
 
 use_epd=False
-use_debug=False
+use_debug=True
 bcol=0
 wcol=1
 
@@ -72,8 +72,8 @@ if not use_epd:
 else:
     bcol=1
     wcol=0
-    dispbuf=bytearray(200 * 80 // 8)
-    disp=framebuf.FrameBuffer(dispbuf, 200, 80, framebuf.MONO_HLSB)
+    dispbuf=bytearray(200 * 96 // 8)
+    disp=framebuf.FrameBuffer(dispbuf, 200, 96, framebuf.MONO_HLSB)
     disp.fill(bcol)
     e.display_part_base_white_image()
     e.init(True)
@@ -82,7 +82,7 @@ def disp_show():
     if not use_epd:
         disp.show()
     else:
-        e.set_frame_memory(dispbuf,0,0,200,80)
+        e.set_frame_memory(dispbuf,0,0,200,96)
         #disp.fill(bcol)
         #e.set_frame_memory(dispbuf,0,100,200,100)
         e.display_part_frame()
@@ -300,7 +300,7 @@ class MeteoSource:
             self.weinfo=[]
             sslsock.write(self.to_send)
             while True:
-                data=sslsock.read(1024)
+                data=sslsock.read(512)
                 if data:
                    # check header
                    if self.ContLen==-1:
