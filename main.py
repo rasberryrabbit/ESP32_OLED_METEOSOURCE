@@ -70,12 +70,15 @@ if not use_epd:
 else:
     dispbuf=bytearray(e.width // 8 * e.height)
     disp=framebuf.FrameBuffer(dispbuf, e.width, e.height, framebuf.MONO_HLSB)
+    disp.fill(0)
+    e.display_part(dispbuf)
+    e.init(True)
     
 def disp_show():
     if not use_epd:
         disp.show()
     else:
-        e.display(dispbuf)
+        e.display_part(dispbuf)
         
  
 # read config
