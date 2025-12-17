@@ -1,6 +1,6 @@
 """ main. py """
 
-use_epd=True
+use_epd=False
 use_debug=False
 bcol=0
 wcol=1
