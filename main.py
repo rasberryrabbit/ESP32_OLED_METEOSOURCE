@@ -2,6 +2,8 @@
 
 use_epd=False
 use_debug=False
+bcol=0
+wcol=1
 
 from machine import Timer, Pin, I2C, RTC, SPI
 import micropython, re, time, network, socket, ntptime, configreader, random, ssl, uos
@@ -64,13 +66,15 @@ esp_id = ubinascii.hexlify(uid).decode()
 if not use_epd:
     import sh1106
     disp=sh1106.SH1106_I2C(128,64,i2c,None,0x3c,rotate=180)
-    disp.fill(0)
+    disp.fill(bcol)
     disp.show()
     disp.contrast(0x5f)
 else:
+    bcol=1
+    wcol=0
     dispbuf=bytearray(e.width // 8 * e.height)
     disp=framebuf.FrameBuffer(dispbuf, e.width, e.height, framebuf.MONO_HLSB)
-    disp.fill(0)
+    disp.fill(bcol)
     e.display_part(dispbuf)
     e.init(True)
     
@@ -166,8 +170,8 @@ def tryconnect(dispid):
     while wlan.isconnected():
         pass
     if not wlan.isconnected():
-      disp.text('Connect',0,0)
-      disp.text(ssid,0,8)
+      disp.text('Connect',0,0,wcol)
+      disp.text(ssid,0,8,wcol)
       disp_show()
       #if modelc3:
       #    wlan.config(txpower=8.5)
@@ -188,9 +192,9 @@ def tryconnect(dispid):
                       passw=''
                       wlan.connect(ssid,passw)
                       trycounter=0
-                      disp.text('Connect ',0,0)
+                      disp.text('Connect ',0,0,wcol)
                       if dispid:
-                          disp.text(ssid,0,8)
+                          disp.text(ssid,0,8,wcol)
                       print('Connect %s' % (ssid))
                       break
               # reset ignore list
@@ -201,12 +205,12 @@ def tryconnect(dispid):
                   ssid=config.option['ssid']
                   passw=config.option['pass']
                   wlan.connect(ssid,passw)
-                  disp.text('ReConnect ',0,0)
+                  disp.text('ReConnect ',0,0,wcol)
                   if dispid:
-                      disp.text(ssid,0,8)
+                      disp.text(ssid,0,8,wcol)
                   print('ReConnect %s' % (ssid))
-          disp.fill_rect(120,0,9,8,0)
-          disp.text(delaych[trycounter % 4],120,0)
+          disp.fill_rect(120,0,9,8,bcol)
+          disp.text(delaych[trycounter % 4],120,0,wcol)
           disp_show()
           time.sleep_ms(500)
     print('network config:',wlan.ifconfig())
@@ -223,8 +227,8 @@ def synctime():
         except Exception as e:
             print(str(e))
             print("sync time")
-            disp.fill_rect(120,0,9,8,0)
-            disp.text(delaych[counter % 4],120,0)
+            disp.fill_rect(120,0,9,8,bcol)
+            disp.text(delaych[counter % 4],120,0,wcol)
             disp_show()
             counter+=1
         time.sleep(1)
@@ -436,33 +440,33 @@ winfo=MeteoSource(lat,lon,key)
 
 def drawvline(x,y,h):
     for yi in range(random.randint(0,1),h,2):
-        disp.pixel(x,y+yi,1)
+        disp.pixel(x,y+yi,wcol)
 
 def drawtemp(x,y,t):
-    disp.text('T',x,y)
+    disp.text('T',x,y,wcol)
     if t>0:
-        disp.text('%4.1f' % (t),x+10,y)
+        disp.text('%4.1f' % (t),x+10,y,wcol)
     else:
-        disp.fill_rect(x+8,y,4*8+2,8,1)
-        disp.hline(x+8,y+4,3,0)
-        disp.text('%4.1f' % (-t),x+10,y,0)
+        disp.fill_rect(x+8,y,4*8+2,8,wcol)
+        disp.hline(x+8,y+4,3,bcol)
+        disp.text('%4.1f' % (-t),x+10,y,bcol)
 
 def drawpop(x,y,pop):
     xp=int(pop*100)
-    disp.fill_rect(x-1,y,4*8+2,8,1)
-    disp.text('%3d%%' % (xp),x,y,0)
+    disp.fill_rect(x-1,y,4*8+2,8,wcol)
+    disp.text('%3d%%' % (xp),x,y,bcol)
     
 def drawrain(x,y,rain):
-    disp.fill_rect(x-1,y,4*8+2,8,1)
-    disp.text('%4.2f' % (rain),x,y,0)
+    disp.fill_rect(x-1,y,4*8+2,8,wcol)
+    disp.text('%4.2f' % (rain),x,y,bcol)
     
 def drawwind(x,y,wind):
-    disp.text('W',x,y)
+    disp.text('W',x,y,wcol)
     if wind>=7.0:
-        disp.fill_rect(x+9,y,4*8+2,8,1)
-        disp.text('%4.1f' % (wind),x+10,y,0)        
+        disp.fill_rect(x+9,y,4*8+2,8,wcol)
+        disp.text('%4.1f' % (wind),x+10,y,bcol)        
     else:
-        disp.text('%4.1f' % (wind),x+10,y)
+        disp.text('%4.1f' % (wind),x+10,y,wcol)
     
 def loadpbm(x,y,fname):
     f=open(fname,'rb')
@@ -471,8 +475,9 @@ def loadpbm(x,y,fname):
     f.readline()
     data=bytearray(f.read())
     f.close()
-    for i, v in enumerate(data):
-        data[i]=~v
+    if not use_epd:
+        for i, v in enumerate(data):
+            data[i]=~v
     fimg=framebuf.FrameBuffer(data,32,32,framebuf.MONO_HLSB)
     disp.blit(fimg,x,y)
     data=[]
@@ -483,7 +488,7 @@ def displayinfo(bpop):
     i=0
     idx=0
     px=random.randint(0,2)
-    disp.fill(0)
+    disp.fill(bcol)
     if winfo.imgoffset>2:
         for wi in winfo.weinfo:
             if fileexists(wi[3]):
@@ -491,15 +496,15 @@ def displayinfo(bpop):
             else:
                 print('error',wi[3])
             dt=time.localtime(wi[1])
-            disp.text('%s' % (wi[2].decode()[:11]),px+0,i)
+            disp.text('%s' % (wi[2].decode()[:11]),px+0,i,wcol)
             drawtemp(px+0,i+8,wi[5])
             drawwind(px+0,i+16,wi[6])
-            disp.text('  %s' % (wi[7].decode()),px+0,i+24)
+            disp.text('  %s' % (wi[7].decode()),px+0,i+24,wcol)
             if wi[8]>0:
-                disp.text(' %3d%%' % (wi[8]), px+50, i+8)
+                disp.text(' %3d%%' % (wi[8]), px+50, i+8,wcol)
             if wi[9]>0:
                 drawrain(px+50,i+16,wi[9])
-            disp.text('%2d:00' % (dt[3]),px+50,i+24)
+            disp.text('%2d:00' % (dt[3]),px+50,i+24,wcol)
             drawvline(px+45,i+8,24)
             i+=32
             # append valid info
@@ -518,17 +523,17 @@ def displayinfo(bpop):
                 print('error',wi[3])
             dt=time.localtime(wi[1])
             if idx==0:
-                disp.text('Error : %d' % (winfo.err),px+0,i)
+                disp.text('Error : %d' % (winfo.err),px+0,i,wcol)
             else:
-                disp.text('%s' % (wi[2].decode()[:11]),px+0,i)
+                disp.text('%s' % (wi[2].decode()[:11]),px+0,i,wcol)
             drawtemp(px+0,i+8,wi[5])
             drawwind(px+0,i+16,wi[6])
-            disp.text('  %s' % (wi[7].decode()),px+0,i+24)
+            disp.text('  %s' % (wi[7].decode()),px+0,i+24,wcol)
             if wi[8]>0:
-                disp.text(' %3d%%' % (wi[8]), px+50, i+8)
+                disp.text(' %3d%%' % (wi[8]), px+50, i+8,wcol)
             if wi[9]>0:
                 drawrain(px+50,i+16,wi[9])
-            disp.text('%2d:00' % (dt[3]),px+50,i+24)
+            disp.text('%2d:00' % (dt[3]),px+50,i+24,wcol)
             drawvline(px+45,i+8,24)
             i+=32
             if idx==1:
@@ -602,7 +607,7 @@ def cbUpdate(t):
                     for rom in roms:
                         dstemp=ds_sen.read_temp(rom)
                     if dstemp!=85.0:
-                        disp.fill_rect(0,0,11*8+2,8,0)
+                        disp.fill_rect(0,0,11*8+2,8,bcol)
                         drawtemp(random.randint(0,2),0,dstemp)
                         disp_show()
 
