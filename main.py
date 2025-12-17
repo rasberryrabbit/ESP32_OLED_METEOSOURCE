@@ -71,8 +71,8 @@ if not use_epd:
 else:
     bcol=1
     wcol=0
-    dispbuf=bytearray(200 * 96 // 8)
-    disp=framebuf.FrameBuffer(dispbuf, 200, 96, framebuf.MONO_HLSB)
+    dispbuf=bytearray(200 * 100 // 8)
+    disp=framebuf.FrameBuffer(dispbuf, 200, 100, framebuf.MONO_HLSB)
     disp.fill(bcol)
     e.display_part_base_white_image()
     e.display_part_base_white_image()
@@ -82,7 +82,7 @@ def disp_show():
     if not use_epd:
         disp.show()
     else:
-        e.set_frame_memory(dispbuf,0,0,200,96)
+        e.set_frame_memory(dispbuf,0,0,200,100)
         #disp.fill(bcol)
         #e.set_frame_memory(dispbuf,0,100,200,100)
         e.display_part_frame()
