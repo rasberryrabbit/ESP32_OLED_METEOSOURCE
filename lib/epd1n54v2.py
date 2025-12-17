@@ -99,7 +99,6 @@ class EPD:
         self.busy.init(self.busy.IN)
         self.width = EPD_WIDTH
         self.height = EPD_HEIGHT
-        self.fast = False
     
     def send_command(self, command):
         self.dc(0)  # LOW
@@ -141,24 +140,24 @@ class EPD:
         self.send_command(b'\x2c')
         self.send_data(bytearray([lut_data[158]]))
     
-    def hdir_init(self):
+    def hdir_init(self, partial=False):
         """Initialize display in high direction mode"""
-        
+            
         self.reset()
-        
         self.wait_until_idle()
-        self.send_command(b'\x12')  # SWRESET
-        self.wait_until_idle()
-        
-        self.send_command(b'\x01')  # Driver output control
-        self.send_data(b'\xC7')
-        self.send_data(b'\x00')
-        self.send_data(b'\x01')
-        
-        self.send_command(b'\x11')  # data entry mode
-        self.send_data(b'\x01')
-        
-        if not self.fast:
+
+        if not partial:
+            self.send_command(b'\x12')  # SWRESET
+            self.wait_until_idle()
+            
+            self.send_command(b'\x01')  # Driver output control
+            self.send_data(b'\xC7')
+            self.send_data(b'\x00')
+            self.send_data(b'\x01')
+            
+            self.send_command(b'\x11')  # data entry mode
+            self.send_data(b'\x01')
+            
             self.send_command(b'\x44')  # set Ram-X address start/end position
             self.send_data(b'\x00')
             self.send_data(b'\x18')  # 0x18 -> (24+1)*8=200
@@ -168,45 +167,68 @@ class EPD:
             self.send_data(b'\x00')
             self.send_data(b'\x00')
             self.send_data(b'\x00')
-        
-        self.send_command(b'\x3C')  # BorderWaveform
-        self.send_data(b'\x01')
-        
-        self.send_command(b'\x18')
-        self.send_data(b'\x80')
-        
-        self.send_command(b'\x22')  # Load Temperature and waveform setting
-        self.send_data(b'\xB1')
-        self.send_command(b'\x20')
-        
-        if not self.fast:
+            
+            self.send_command(b'\x3C')  # BorderWaveform
+            self.send_data(b'\x01')
+            
+            self.send_command(b'\x18')
+            self.send_data(b'\x80')
+            
+            self.send_command(b'\x22')  # Load Temperature and waveform setting
+            self.send_data(b'\xB1')
+            self.send_command(b'\x20')
+            
             self.send_command(b'\x4E')  # set RAM x address count to 0
             self.send_data(b'\x00')
             self.send_command(b'\x4F')  # set RAM y address count to 0x199
             self.send_data(b'\xC7')
             self.send_data(b'\x00')
             self.wait_until_idle()
-        
-        self.set_lut(WF_Full_1IN54)
+            
+            self.set_lut(WF_Full_1IN54)
 
-    def init(self):
+        else:
+
+            self.set_lut(WF_PARTIAL_1IN54_0)
+            
+            self.send_command(b'\x37')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x40')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            
+            self.send_command(b'\x3c')  # BorderWavefrom
+            self.send_data(b'\x80')
+            
+            self.send_command(b'\x22')
+            self.send_data(b'\xc0')
+            self.send_command(b'\x20')
+            self.wait_until_idle()
+
+    def init(self, partial=False):
         """Initialize display in low direction mode"""
         
         self.reset()
-        
-        self.wait_until_idle()
-        self.send_command(b'\x12')  # SWRESET
         self.wait_until_idle()
         
-        self.send_command(b'\x01')  # Driver output control
-        self.send_data(b'\xC7')
-        self.send_data(b'\x00')
-        self.send_data(b'\x00')
-        
-        self.send_command(b'\x11')  # data entry mode
-        self.send_data(b'\x03')
-        
-        if not self.fast:
+        if not partial:
+            self.send_command(b'\x12')  # SWRESET
+            self.wait_until_idle()
+            
+            self.send_command(b'\x01')  # Driver output control
+            self.send_data(b'\xC7')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            
+            self.send_command(b'\x11')  # data entry mode
+            self.send_data(b'\x03')
+            
             self.send_command(b'\x44')
             # x point must be the multiple of 8 or the last 3 bits will be ignored
             self.send_data(bytearray([(0 >> 3) & 0xFF]))
@@ -217,35 +239,57 @@ class EPD:
             self.send_data(bytearray([(0 >> 8) & 0xFF]))
             self.send_data(bytearray([199 & 0xFF]))
             self.send_data(bytearray([(199 >> 8) & 0xFF]))
-        
-        self.send_command(b'\x3C')  # BorderWaveform
-        self.send_data(b'\x01')
-        
-        self.send_command(b'\x18')
-        self.send_data(b'\x80')
-        
-        self.send_command(b'\x22')  # Load Temperature and waveform setting
-        self.send_data(b'\xB1')
-        self.send_command(b'\x20')
-        
-        if not self.fast:
+            
+            self.send_command(b'\x3C')  # BorderWaveform
+            self.send_data(b'\x01')
+            
+            self.send_command(b'\x18')
+            self.send_data(b'\x80')
+            
+            self.send_command(b'\x22')  # Load Temperature and waveform setting
+            self.send_data(b'\xB1')
+            self.send_command(b'\x20')
+            
             self.send_command(b'\x4E')  # set RAM x address count to 0
             self.send_data(b'\x00')
             self.send_command(b'\x4F')  # set RAM y address count to 0x199
             self.send_data(b'\xC7')
             self.send_data(b'\x00')
             self.wait_until_idle()
-        
-        self.set_lut(WF_Full_1IN54)
+            
+            self.set_lut(WF_Full_1IN54)
 
+        else:
+
+            self.set_lut(WF_PARTIAL_1IN54_0)
+            
+            self.send_command(b'\x37')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x40')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            self.send_data(b'\x00')
+            
+            self.send_command(b'\x3c')  # BorderWavefrom
+            self.send_data(b'\x80')
+            
+            self.send_command(b'\x22')
+            self.send_data(b'\xc0')
+            self.send_command(b'\x20')
+            self.wait_until_idle()
     
     def reset(self):
         self.rst(1)  # HIGH
-        sleep_ms(20)
+        sleep_ms(200)
         self.rst(0)  # LOW - module reset
         sleep_ms(5)
         self.rst(1)  # HIGH
-        sleep_ms(20)
+        sleep_ms(200)
     
     def clear(self,color=b'\xff'):
         self.send_command(b'\x24')
@@ -259,51 +303,41 @@ class EPD:
         self.set_frame_memory(frame_buffer,0,0,self.width,self.height)        
         # DISPLAY REFRESH
         self.display_frame()
-        
-    def display_upper(self, frame_buffer):
-        self.set_frame_memory(frame_buffer,0,0,self.width,self.height // 2)        
-        # DISPLAY REFRESH
-        self.display_frame()
-    
-    def display_bottom(self, frame_buffer):
-        self.set_frame_memory(frame_buffer,0,self.height // 2,self.width,self.height // 2)        
-        # DISPLAY REFRESH
-        self.display_frame()
     
     def display_part_base_image(self, frame_buffer):
-        w = (EPD_WIDTH // 8) if (EPD_WIDTH % 8 == 0) else (EPD_WIDTH // 8 + 1)
-        h = EPD_HEIGHT
+        len=EPD_WIDTH // 8 * EPD_HEIGHT
+        if EPD_WIDTH & 7!=0:
+            len=len+1
         
         if frame_buffer is not None:
             self.send_command(b'\x24')
-            for j in range(h):
-                for i in range(w):
-                    self.send_data(bytearray([frame_buffer[i + j * w]]))
+            for j in range(len):
+                self.send_data(bytearray([frame_buffer[j]]))
         
         # DISPLAY REFRESH
-        self.display_frame()
+        self.display_part_frame()
     
     def display_part_base_white_image(self):
-        w = (EPD_WIDTH // 8) if (EPD_WIDTH % 8 == 0) else (EPD_WIDTH // 8 + 1)
-        h = EPD_HEIGHT
+        len=EPD_WIDTH // 8 * EPD_HEIGHT
+        if EPD_WIDTH & 7!=0:
+            len=len+1
         
         self.send_command(b'\x24')
-        for j in range(h):
-            for i in range(w):
-                self.send_data(b'\xff')
+        for j in range(len):
+            self.send_data(b'\xff')
         
         # DISPLAY REFRESH
-        self.display_frame()
+        self.display_part_frame()
     
     def display_part(self, frame_buffer):
-        w = (EPD_WIDTH // 8) if (EPD_WIDTH % 8 == 0) else (EPD_WIDTH // 8 + 1)
-        h = EPD_HEIGHT
+        len=EPD_WIDTH // 8 * EPD_HEIGHT
+        if EPD_WIDTH & 7!=0:
+            len=len+1
         
         if frame_buffer is not None:
             self.send_command(b'\x24')
-            for j in range(h):
-                for i in range(w):
-                    self.send_data(bytearray([frame_buffer[i + j * w]]))
+            for j in range(len):
+                self.send_data(bytearray([frame_buffer[j]]))
         
         # DISPLAY REFRESH
         self.display_part_frame()
@@ -339,15 +373,12 @@ class EPD:
     
     def display_part_frame(self):
         self.send_command(b'\x22')
-        self.send_data(b'\xcF')
+        self.send_data(b'\xcf')
         self.send_command(b'\x20')
         self.wait_until_idle()
     
     def set_frame_memory(self, image_buffer, x, y, image_width, image_height):
-        
-        self.send_command(b'\x3c')
-        self.send_data(b'\x80')
-        
+
         if (image_buffer is None or
                 x < 0 or image_width < 0 or
                 y < 0 or image_height < 0):
@@ -376,65 +407,8 @@ class EPD:
             for i in range((x_end - x + 1) // 8):
                 self.send_data(bytearray([image_buffer[i + j * (image_width // 8)]]))
     
-    def set_frame_memory_partial(self, image_buffer, x, y, image_width, image_height):
-        self.digital_write(self.reset_pin, 0)  # module reset
-        self.delay_ms(2)
-        self.digital_write(self.reset_pin, 1)
-        self.delay_ms(2)
-        
-        self.set_lut(WF_PARTIAL_1IN54_0)
-        
-        self.send_command(b'\x37')
-        self.send_data(b'\x00')
-        self.send_data(b'\x00')
-        self.send_data(b'\x00')
-        self.send_data(b'\x00')
-        self.send_data(b'\x00')
-        self.send_data(b'\x40')
-        self.send_data(b'\x00')
-        self.send_data(b'\x00')
-        self.send_data(b'\x00')
-        self.send_data(b'\x00')
-        
-        self.send_command(b'\x3c')
-        self.send_data(b'\x80')
-        
-        self.send_command(b'\x22')
-        self.send_data(b'\xc0')
-        self.send_command(b'\x20')
-        self.wait_until_idle()
-        
-        if (image_buffer is None or
-                x < 0 or image_width < 0 or
-                y < 0 or image_height < 0):
-            return
-        
-        # x point must be the multiple of 8 or the last 3 bits will be ignored
-        x &= 0xF8
-        image_width &= 0xF8
-        
-        if x + image_width >= self.width:
-            x_end = self.width - 1
-        else:
-            x_end = x + image_width - 1
-        
-        if y + image_height >= self.height:
-            y_end = self.height - 1
-        else:
-            y_end = y + image_height - 1
-        
-        self.set_memory_area(x, y, x_end, y_end)
-        self.set_memory_pointer(x, y)
-        self.send_command(b'\x24')
-        
-        # send the image data
-        for j in range(y_end - y + 1):
-            for i in range((x_end - x + 1) // 8):
-                self.send_data(image_buffer[i + j * (image_width // 8)])
-    
     def sleep(self):
         self.send_command(b'\x10')  # enter deep sleep
         self.send_data(b'\x01')
         sleep_ms(200)
-
 
