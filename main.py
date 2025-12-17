@@ -1,7 +1,7 @@
 """ main. py """
 
 use_epd=True
-use_debug=True
+use_debug=False
 bcol=0
 wcol=1
 
@@ -164,7 +164,7 @@ if needconfig:
     time.sleep(0.5)
     wlan.active(True)
     if modelc3:
-        wlan.config(txpower=7.0)
+        wlan.config(txpower=10.0) # 8.5
     wlan.config(ssid="weather_%s" %esp_id,password="")
 else:
     wlan = network.WLAN(network.STA_IF)
@@ -172,7 +172,7 @@ else:
     time.sleep(0.5)
     wlan.active(True)
     if modelc3:
-        wlan.config(txpower=7.0) # 8.5
+        wlan.config(txpower=10.0) # 8.5
 
 def tryconnect(dispid):
     global ssid, passw, ignlist
