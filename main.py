@@ -75,11 +75,14 @@ else:
     tempsen_int=60
     bcol=1
     wcol=0
+    # half height framebuffer
     dispbuf=bytearray(200 * 100 // 8)
     disp=framebuf.FrameBuffer(dispbuf, 200, 100, framebuf.MONO_HLSB)
     disp.fill(bcol)
+    # clear two epaper module buffer
     e.display_part_base_white_image()
     e.display_part_base_white_image()
+    # init partial refresh mode
     e.init(True)
     
 def disp_show(bidx,update):
