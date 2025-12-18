@@ -312,7 +312,7 @@ class MeteoSource:
             self.weinfo=[]
             sslsock.write(self.to_send)
             while True:
-                data=sslsock.read(512)
+                data=sslsock.read(1024)
                 if data:
                    # check header
                    if self.ContLen==-1:
