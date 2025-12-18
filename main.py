@@ -1,6 +1,6 @@
 """ main. py """
 
-use_epd=False
+use_epd=True
 use_debug=False
 bcol=0
 wcol=1
@@ -63,12 +63,14 @@ uid = machine.unique_id()
 esp_id = ubinascii.hexlify(uid).decode()
 
 if not use_epd:
+    iconpath='i32/'
     import sh1106
     disp=sh1106.SH1106_I2C(128,64,i2c,None,0x3c,rotate=180)
     disp.fill(bcol)
     disp.show()
     disp.contrast(0x5f)
 else:
+    iconpath='i48/'
     bcol=1
     wcol=0
     dispbuf=bytearray(200 * 100 // 8)
@@ -78,14 +80,18 @@ else:
     e.display_part_base_white_image()
     e.init(True)
     
-def disp_show():
+def disp_show(bidx,update):
     if not use_epd:
         disp.show()
     else:
-        e.set_frame_memory(dispbuf,0,0,200,100)
+        if bidx!=0:
+            e.set_frame_memory(dispbuf,0,100,200,100)
+        else:
+            e.set_frame_memory(dispbuf,0,0,200,100)
         #disp.fill(bcol)
         #e.set_frame_memory(dispbuf,0,100,200,100)
-        e.display_part_frame()
+        if update:
+            e.display_part_frame()
         
  
 # read config
@@ -183,7 +189,7 @@ def tryconnect(dispid):
     if not wlan.isconnected():
       disp.text('Connect',0,0,wcol)
       disp.text(ssid,0,8,wcol)
-      disp_show()
+      disp_show(0,True)
       print('Connect %s' % (ssid))
       wlan.connect(ssid,passw)
       trycounter=0
@@ -220,7 +226,7 @@ def tryconnect(dispid):
                   print('ReConnect %s' % (ssid))
           disp.fill_rect(120,0,9,8,bcol)
           disp.text(delaych[trycounter % 4],120,0,wcol)
-          disp_show()
+          disp_show(0,True)
           time.sleep_ms(1000)
     print('network config:',wlan.ifconfig())
     
@@ -238,7 +244,7 @@ def synctime():
             print("sync time")
             disp.fill_rect(120,0,9,8,bcol)
             disp.text(delaych[counter % 4],120,0,wcol)
-            disp_show()
+            disp_show(0,True)
             counter+=1
         time.sleep(1)
 
@@ -260,7 +266,7 @@ class MeteoSource:
     weinfo=[]
     lsinfo=[]
     lastsynctime=0
-    err=0
+    errno=0
     errmsg=''
     
     def __init__(self,lat,lon,key):
@@ -269,7 +275,7 @@ class MeteoSource:
         self.to_send=b'GET /api/v1/free/point?lat=%s&lon=%s&sections=hourly&timezone=Auto&language=en&units=metric&key=%s HTTP/1.1\r\nHost: www.meteosource.com\r\nConnection: keep-alive\r\nAccept: */*\r\n\r\n' % (lat,lon,key)
     
     def GetInfo(self):
-        self.err=0
+        self.errno=0
         self.errmsg=''
         while True:
             y=time.localtime(time.time()+self.timeoffset)
@@ -317,7 +323,7 @@ class MeteoSource:
                            if s:
                                self.ContLen=int(s.group(1))
                            else:
-                               self.ContLen=8192
+                               self.ContLen=16384
                            data=data[i:]
                    # process body
                    ilen=len(data)
@@ -326,7 +332,7 @@ class MeteoSource:
                        break
                    data=self.last_remain+data
                    self.last_remain=b''
-                   if self.imgoffset>2:
+                   if self.imgoffset>4:
                        data=b''
                        break
                    spos=0
@@ -413,7 +419,7 @@ class MeteoSource:
                                self.weinfo.append([dayw,dayww,weath,weicon,summary,ttemp,windspd,winddir,cloud,rain])
                                self.imgoffset+=1
                            data=data[epos:]
-                           if self.imgoffset>2:
+                           if self.imgoffset>4:
                                break
                        else:
                            self.last_remain=data
@@ -430,7 +436,7 @@ class MeteoSource:
                 s.close()
                 print(tracestr)
             else:
-                self.err = e.errno
+                self.errno = e.errno
                 self.errmsg = str(e)
                 print(self.errmsg)
 
@@ -487,25 +493,39 @@ def loadpbm(x,y,fname):
     if not use_epd:
         for i, v in enumerate(data):
             data[i]=~v
-    fimg=framebuf.FrameBuffer(data,32,32,framebuf.MONO_HLSB)
+        fimg=framebuf.FrameBuffer(data,32,32,framebuf.MONO_HLSB)
+    else:
+        fimg=framebuf.FrameBuffer(data,48,48,framebuf.MONO_HLSB)
     disp.blit(fimg,x,y)
     data=[]
     fimg=None
    
-def displayinfo(bpop):
+def displayinfo(sidx):
     #[dayw,dayww,weath,weicon,summary,ttemp,windspd,winddir,cloud,rain]
     i=0
     idx=0
-    px=random.randint(0,2)
+    if not use_epd:
+        px=random.randint(0,2)
+    else:
+        px=0
     disp.fill(bcol)
-    if winfo.imgoffset>2:
+    if winfo.imgoffset>4:
         for wi in winfo.weinfo:
-            if fileexists(wi[3]):
-                loadpbm(px+90,i,wi[3])
+            if idx<sidx:
+                idx+=1
+                continue
+            if fileexists(iconpath+wi[3]):
+                if use_epd:
+                    loadpbm(px+152,i,iconpath+wi[3])
+                else:
+                    loadpbm(px+90,i,iconpath+wi[3])
             else:
-                print('error',wi[3])
+                print('error',iconpath+wi[3])
             dt=time.localtime(wi[1])
-            disp.text('%s' % (wi[2].decode()[:11]),px+0,i,wcol)
+            if not use_epd:
+                disp.text('%s' % (wi[2].decode()[:11]),px+0,i,wcol)
+            else:
+                disp.text('%s' % (wi[2].decode()[:19]),px+0,i,wcol)
             drawtemp(px+0,i+8,wi[5])
             drawwind(px+0,i+16,wi[6])
             disp.text('  %s' % (wi[7].decode()),px+0,i+24,wcol)
@@ -513,28 +533,40 @@ def displayinfo(bpop):
                 disp.text(' %3d%%' % (wi[8]), px+50, i+8,wcol)
             if wi[9]>0:
                 drawrain(px+50,i+16,wi[9])
-            disp.text('%2d:00' % (dt[3]),px+50,i+24,wcol)
+            if not use_epd:
+                disp.text('%2d:00' % (dt[3]),px+50,i+24,wcol)
+            else:
+                disp.text('%2d:00' % (dt[3]),px+0,i+32,wcol)
             drawvline(px+45,i+8,24)
-            i+=32
+            if use_epd:
+                i+=48
+            else:
+                i+=32
             # append valid info
             if idx==0:
                 winfo.lsinfo=[]
             winfo.lsinfo.append(wi)
-            if idx==1:
+            if idx % 2==1:
                 break
             idx+=1
     else:
         # display last valid information
         for wi in winfo.lsinfo:
-            if fileexists(wi[3]):
-                loadpbm(px+90,i,wi[3])
+            if fileexists(iconpath+wi[3]):
+                if use_epd:
+                    loadpbm(px+152,i,iconpath+wi[3])
+                else:
+                    loadpbm(px+90,i,iconpath+wi[3])
             else:
-                print('error',wi[3])
+                print('error',iconpath+wi[3])
             dt=time.localtime(wi[1])
             if idx==0:
-                disp.text('Error : %d' % (winfo.err),px+0,i,wcol)
+                disp.text('Error : %d' % (winfo.errno),px+0,i,wcol)
             else:
-                disp.text('%s' % (wi[2].decode()[:11]),px+0,i,wcol)
+                if not use_epd:
+                    disp.text('%s' % (wi[2].decode()[:11]),px+0,i,wcol)
+                else:
+                    disp.text('%s' % (wi[2].decode()[:19]),px+0,i,wcol)
             drawtemp(px+0,i+8,wi[5])
             drawwind(px+0,i+16,wi[6])
             disp.text('  %s' % (wi[7].decode()),px+0,i+24,wcol)
@@ -542,13 +574,20 @@ def displayinfo(bpop):
                 disp.text(' %3d%%' % (wi[8]), px+50, i+8,wcol)
             if wi[9]>0:
                 drawrain(px+50,i+16,wi[9])
-            disp.text('%2d:00' % (dt[3]),px+50,i+24,wcol)
+            if not use_epd:
+                disp.text('%2d:00' % (dt[3]),px+50,i+24,wcol)
+            else:
+                disp.text('%2d:00' % (dt[3]),px+0,i+32,wcol)
             drawvline(px+45,i+8,24)
-            i+=32
+            if use_epd:
+                i+=48
+            else:
+                i+=32
             if idx==1:
                 break
             idx+=1
-    disp_show()
+    if not use_epd:
+        disp_show(0,True)
     
 timeoff=0
 showuvi=0
@@ -573,7 +612,7 @@ def cbUpdate(t):
                 lcnt=lcnt+1
                 if lcnt>2:
                     break
-                if winfo.err==113 or winfo.err==116:
+                if winfo.errno==113 or winfo.errno==116:
                     winfo.error_count=0
                     winfo.imgoffset=0
                     time.sleep(2)
@@ -584,8 +623,12 @@ def cbUpdate(t):
                         tryconnect(True)
                     break
 
-            if winfo.imgoffset>2:
-                displayinfo(True)
+            if winfo.imgoffset>4:
+                displayinfo(0)
+                if use_epd:
+                    disp_show(0,False)
+                    displayinfo(2)
+                    disp_show(1,True)
                 print('ok')
 
         except Exception as e:
@@ -597,17 +640,17 @@ def cbUpdate(t):
                 print("cbUpdate : ")
                 print(tracestr)
             else:
-                winfo.err = e.err
+                winfo.errno = e.errno
                 winfo.errmsg = str(e)
                 print(winfo.errmsg)
 
         tmUpdate.init(period=1000, mode=Timer.PERIODIC, callback=cbUpdate)
     else:
         if not use_epd:
-            displayinfo(True)
+            displayinfo(0)
         # draw local temp
         if tempsensor=='1':
-            if timeupd % 5==0:
+            if timeupd % 60==0:
                 ds_sen.convert_temp()
                 ds_readcnt=0
             else:
@@ -616,9 +659,17 @@ def cbUpdate(t):
                     for rom in roms:
                         dstemp=ds_sen.read_temp(rom)
                     if dstemp!=85.0:
-                        disp.fill_rect(0,0,11*8+2,8,bcol)
-                        drawtemp(random.randint(0,2),0,dstemp)
-                        disp_show()
+                        if use_epd:
+                            displayinfo(0)
+                            disp_show(0,False)
+                            displayinfo(2)
+                            ds_readcnt=0 # update once
+                            disp.fill_rect(0,0,19*8,8,bcol)
+                            drawtemp(0,40,dstemp)
+                        else:
+                            disp.fill_rect(0,0,11*8+2,8,bcol)
+                            drawtemp(random.randint(0,2),0,dstemp)
+                        disp_show(1,True)
 
         # Night mode
         if not use_epd:
