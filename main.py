@@ -273,6 +273,7 @@ class MeteoSource:
     lastsynctime=0
     errno=0
     errmsg=''
+    timezone_upd=False
     
     def __init__(self,lat,lon,key):
         self.last_remain=b''
@@ -351,11 +352,13 @@ class MeteoSource:
                            try:
                                tz=tztimezone.GetTimezone(stimezone.decode('utf-8'))
                            except:
-                               tz=None
+                               tz=tmzone
 
-                           if tz:
+                           if (not self.timezone_upd) and tz:
                                #print(tz)
                                self.timeoffset=int(float(tz)*3600)
+                               self.timezone_upd=True
+                               print("tz update")
 
                    while True:
                        spos=data.decode().find("{\"date\":")
