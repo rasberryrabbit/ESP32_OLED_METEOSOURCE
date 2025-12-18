@@ -64,6 +64,7 @@ esp_id = ubinascii.hexlify(uid).decode()
 
 if not use_epd:
     iconpath='i32/'
+    tempsen_int=5
     import sh1106
     disp=sh1106.SH1106_I2C(128,64,i2c,None,0x3c,rotate=180)
     disp.fill(bcol)
@@ -71,6 +72,7 @@ if not use_epd:
     disp.contrast(0x5f)
 else:
     iconpath='i48/'
+    tempsen_int=60
     bcol=1
     wcol=0
     dispbuf=bytearray(200 * 100 // 8)
@@ -650,7 +652,7 @@ def cbUpdate(t):
             displayinfo(0)
         # draw local temp
         if tempsensor=='1':
-            if timeupd % 60==0:
+            if timeupd % tempsen_int==0:
                 ds_sen.convert_temp()
                 ds_readcnt=0
             else:
