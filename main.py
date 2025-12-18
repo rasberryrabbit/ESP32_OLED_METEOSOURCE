@@ -350,14 +350,13 @@ class MeteoSource:
                        if stimezone:
                            #print(stimezone)
                            try:
-                               tz=tztimezone.GetTimezone(stimezone.decode('utf-8'))
+                               tz=tztimezone.GetTimezone(stimezone.decode())
                            except:
-                               tz=tmzone
+                               tz=tzone
 
                            if (not self.timezone_upd) and tz:
                                #print(tz)
                                self.timeoffset=int(float(tz)*3600)
-                               self.timezone_upd=True
                                print("tz update")
 
                    while True:
@@ -424,6 +423,7 @@ class MeteoSource:
                                rain=0.0
                            # info array
                            if dayww>self.firststamp:
+                               print(dayw,dayww)
                                self.weinfo.append([dayw,dayww,weath,weicon,summary,ttemp,windspd,winddir,cloud,rain])
                                self.imgoffset+=1
                            data=data[epos:]
@@ -551,7 +551,7 @@ def displayinfo(sidx):
             else:
                 i+=32
             # append valid info
-            if idx==0:
+            if idx==0 and sidx==0:
                 winfo.lsinfo=[]
             winfo.lsinfo.append(wi)
             if idx % 2==1:
