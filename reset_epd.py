@@ -7,10 +7,17 @@ import errno, sys, ubinascii, machine
 import epd1n54v2
 import framebuf
 
-spi=SPI(2, sck=Pin(18), mosi=Pin(23))
-spi.init()
-e = epd1n54v2.EPD(spi, cs=Pin(14), dc=Pin(12), rst=Pin(13), busy=Pin(4))
-e.init()
+if uos.uname().machine.find("C3")>-1:
+    spi=SPI(1)
+    spi.init(sck=Pin(4),mosi=Pin(6),miso=None)
+    e = epd1n54v2.EPD(spi, cs=Pin(20), dc=Pin(3), rst=Pin(2), busy=Pin(1))
+    e.init()
+else:
+    spi=SPI(2, sck=Pin(18), mosi=Pin(23))
+    spi.init()
+    e = epd1n54v2.EPD(spi, cs=Pin(14), dc=Pin(12), rst=Pin(13), busy=Pin(4))
+    e.init()
+
 
 dispbuf=bytearray(e.width // 8 * e.height)
 disp=framebuf.FrameBuffer(dispbuf, e.width, e.height, framebuf.MONO_HLSB)
@@ -40,5 +47,3 @@ def doit():
 # partial mode
 e.init(True)
 
-for i in range(8):
-    doit()
