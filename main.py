@@ -257,7 +257,7 @@ def synctime():
 rtc=RTC()
 if not needconfig:
     synctime()
-    print(time.localtime(time.time()+int(tzone*3600)))
+    print(time.gmtime(time.time()+int(tzone*3600)))
 
 # open weather
 class MeteoSource:
@@ -284,8 +284,9 @@ class MeteoSource:
         self.errno=0
         self.errmsg=''
         while True:
-            y=time.localtime(time.time()+self.timeoffset)
+            y=time.gmtime(time.time()+self.timeoffset)
             if y[0]>2000:
+                print(y)
                 break
             disp.text('wait sync',0,0)
             print('wait sync')
@@ -423,7 +424,7 @@ class MeteoSource:
                                rain=0.0
                            # info array
                            if dayww>self.firststamp:
-                               print(dayw,dayww)
+                               #print(dayw,dayww)
                                self.weinfo.append([dayw,dayww,weath,weicon,summary,ttemp,windspd,winddir,cloud,rain])
                                self.imgoffset+=1
                            data=data[epos:]
@@ -529,7 +530,7 @@ def displayinfo(sidx):
                     loadpbm(px+90,i,iconpath+wi[3])
             else:
                 print('error',iconpath+wi[3])
-            dt=time.localtime(wi[1])
+            dt=time.gmtime(wi[1])
             if not use_epd:
                 disp.text('%s' % (wi[2].decode()[:11]),px+0,i,wcol)
             else:
@@ -567,7 +568,7 @@ def displayinfo(sidx):
                     loadpbm(px+90,i,iconpath+wi[3])
             else:
                 print('error',iconpath+wi[3])
-            dt=time.localtime(wi[1])
+            dt=time.gmtime(wi[1])
             if idx==0:
                 disp.text('Error : %d' % (winfo.errno),px+0,i,wcol)
             else:
@@ -681,7 +682,7 @@ def cbUpdate(t):
 
         # Night mode
         if not use_epd:
-            rt=time.localtime(time.time()+winfo.timeoffset)
+            rt=time.gmtime(time.time()+winfo.timeoffset)
             if rt[3]>20 or rt[3]<7:
                 if timeoff>=5:
                     timeoff=0
