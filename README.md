@@ -1,6 +1,7 @@
 # ESP32_OLED_METEOSOURCE
   
 1.3" oled display 128x64. sh1106 controller.  
+Or support waveshare 1.54" e-paper via SPI(optional).  
   
 ESP32  
 3.3V   -- VCC  
