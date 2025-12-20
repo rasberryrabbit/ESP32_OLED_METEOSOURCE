@@ -278,7 +278,7 @@ class MeteoSource:
     def __init__(self,lat,lon,key):
         self.last_remain=b''
         self.lastsynctime=0
-        self.to_send=b'GET /api/v1/free/point?lat=%s&lon=%s&sections=hourly&timezone=Auto&language=en&units=metric&key=%s HTTP/1.1\r\nHost: www.meteosource.com\r\nConnection: keep-alive\r\nAccept: */*\r\n\r\n' % (lat,lon,key)
+        self.to_send=b'GET /api/v1/free/point?lat=%s&lon=%s&sections=current,hourly&timezone=Auto&language=en&units=metric&key=%s HTTP/1.1\r\nHost: www.meteosource.com\r\nConnection: keep-alive\r\nAccept: */*\r\n\r\n' % (lat,lon,key)
     
     def GetInfo(self):
         self.errno=0
