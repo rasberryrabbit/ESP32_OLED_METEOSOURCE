@@ -13,9 +13,9 @@ if uos.uname().machine.find("C3")>-1:
     e = epd1n54v2.EPD(spi, cs=Pin(20), dc=Pin(3), rst=Pin(2), busy=Pin(1))
     e.init()
 else:
-    spi=SPI(2, sck=Pin(18), mosi=Pin(23))
+    spi=SPI(2, sck=Pin(14), mosi=Pin(13))
     spi.init()
-    e = epd1n54v2.EPD(spi, cs=Pin(14), dc=Pin(12), rst=Pin(13), busy=Pin(4))
+    e = epd1n54v2.EPD(spi, cs=Pin(18), dc=Pin(33), rst=Pin(23), busy=Pin(4))
     e.init()
 
 
